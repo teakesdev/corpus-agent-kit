@@ -1,6 +1,6 @@
 /** Pure MCP message handler: local handshake, everything tool-shaped forwarded. */
 export interface BridgeDeps {
-  forward: (msg: object) => Promise<object>;
+  forward: (msg: object) => Promise<object | null>;
 }
 
 const SERVER_INFO = { name: "corpus-agent-kit", version: "0.1.0" };
@@ -35,6 +35,7 @@ export function makeForward(mcpUrl: string, apiKey?: string): BridgeDeps["forwar
     if (apiKey) headers.Authorization = `Bearer ${apiKey}`;
     const res = await fetch(mcpUrl, { method: "POST", headers, body: JSON.stringify(msg) });
     if (!res.ok && res.status !== 202) throw new Error(`hosted MCP returned HTTP ${res.status}`);
-    return res.status === 202 ? {} : ((await res.json()) as object);
+    if (res.status === 202) return null;
+    return (await res.json()) as object;
   };
 }

@@ -29,3 +29,11 @@ test("forward failure returns a JSON-RPC error, not a crash", async () => {
   assert.equal(res.error.code, -32000);
   assert.match(res.error.message, /network down/);
 });
+
+test("HTTP 202 (silent ack) returns null — no frame on stdout", async () => {
+  const res = await handleMessage(
+    { jsonrpc: "2.0", id: 4, method: "tools/call", params: { name: "search_law", arguments: { query: "x" } } },
+    { forward: async () => null },
+  );
+  assert.equal(res, null);
+});
