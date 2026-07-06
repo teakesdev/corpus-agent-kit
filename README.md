@@ -84,7 +84,7 @@ cp .env.example .env
 | Variable | Default | Purpose |
 |---|---|---|
 | `QWEN_API_KEY` | _(required)_ | Qwen Cloud API key |
-| `QWEN_BASE_URL` | _(required)_ | Qwen OpenAI-compatible base URL (e.g. `https://api.qwencloud.com/v1`) |
+| `QWEN_BASE_URL` | _(required)_ | Qwen OpenAI-compatible base URL (e.g. `https://dashscope-intl.aliyuncs.com/compatible-mode/v1`) |
 | `QWEN_MODEL_FAST` | `qwen-flash` | Fast-lane model — standard turns |
 | `QWEN_MODEL_CRITICAL` | `qwen3.7-max` | Critical-lane model — pre-handoff review |
 | `CORPUS_BASE_URL` | `https://corpuslaw.us` | Hosted Corpus platform base URL |
