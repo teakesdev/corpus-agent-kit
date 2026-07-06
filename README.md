@@ -98,7 +98,7 @@ cp .env.example .env
 cp .env.example .env        # fill QWEN_API_KEY + CORPUS_API_KEY
 npm install
 npm run build               # compiles all workspaces
-npm start                   # starts the autopilot HTTP server
+cd autopilot && npm start   # starts the autopilot HTTP server
 # open http://localhost:9000
 ```
 
@@ -113,23 +113,30 @@ Deploy to Alibaba Cloud Function Compute: see
 
 ### mcp-server — stdio MCP bridge
 
+Build locally:
+
+```bash
+cd mcp-server && npm install && npm run build
+```
+
 Add to your MCP client config (Claude Desktop, Cursor, etc.):
 
 ```json
 {
   "mcpServers": {
     "corpus-law": {
-      "command": "npx",
-      "args": ["-y", "@corpus-agent-kit/mcp-server"]
+      "command": "node",
+      "args": ["/absolute/path/to/corpus-agent-kit/mcp-server/dist/index.js"]
     }
   }
 }
 ```
 
-This exposes three tools: `search_law`, `get_law_node`, `list_coverage`.
+Replace `/absolute/path/to/corpus-agent-kit` with the actual path to your clone.
 
-> **HTTP MCP clients:** the hosted endpoint `https://corpuslaw.us/api/mcp`
-> supports the streamable-HTTP MCP transport directly — no local bridge needed.
+> **Note:** The package name `@corpus-agent-kit/mcp-server` is reserved for a future npm publish; until then, build locally and point your MCP client at `mcp-server/dist/index.js`. **HTTP MCP clients:** the hosted endpoint `https://corpuslaw.us/api/mcp` supports the streamable-HTTP MCP transport directly — no local bridge needed.
+
+This exposes three tools: `search_law`, `get_law_node`, `list_coverage`.
 
 ### widget — embeddable law-search
 
