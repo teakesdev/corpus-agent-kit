@@ -45,4 +45,14 @@ describe("server", () => {
     expect((await post()).status).toBe(429);
     delete process.env.SPEND_CAP_TURNS_PER_HOUR;
   });
+  it("preserves non-Error throw values in 500 error body", async () => {
+    const base = await start({ run: async () => { throw "oops"; } });
+    const res = await fetch(`${base}/api/chat`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ messages: [{ role: "user", content: "hello" }] }),
+    });
+    expect(res.status).toBe(500);
+    expect((await res.json()).error).toBe("oops");
+  });
 });

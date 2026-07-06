@@ -60,7 +60,7 @@ export function createServer(deps: Deps = {}): http.Server {
       }
       res.writeHead(404).end();
     } catch (err) {
-      res.writeHead(500, { "Content-Type": "application/json" }).end(JSON.stringify({ error: String((err as Error).message) }));
+      res.writeHead(500, { "Content-Type": "application/json" }).end(JSON.stringify({ error: String(err instanceof Error ? err.message : err) }));
     }
   });
 }
