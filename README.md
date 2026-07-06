@@ -66,7 +66,7 @@ npm >=9
 Clone and install all workspaces:
 
 ```bash
-git clone https://github.com/tywalch/corpus-agent-kit.git
+git clone https://github.com/teakesdev/corpus-agent-kit.git
 cd corpus-agent-kit
 npm install
 ```
@@ -84,11 +84,11 @@ cp .env.example .env
 | Variable | Default | Purpose |
 |---|---|---|
 | `QWEN_API_KEY` | _(required)_ | Qwen Cloud API key |
-| `QWEN_BASE_URL` | `https://api.qwencloud.com/v1` | Qwen OpenAI-compatible base URL |
+| `QWEN_BASE_URL` | _(required)_ | Qwen OpenAI-compatible base URL (e.g. `https://api.qwencloud.com/v1`) |
 | `QWEN_MODEL_FAST` | `qwen-flash` | Fast-lane model — standard turns |
 | `QWEN_MODEL_CRITICAL` | `qwen3.7-max` | Critical-lane model — pre-handoff review |
 | `CORPUS_BASE_URL` | `https://corpuslaw.us` | Hosted Corpus platform base URL |
-| `CORPUS_API_KEY` | _(required)_ | Corpus platform API key |
+| `CORPUS_API_KEY` | _(optional)_ | Corpus platform API key (optional — anonymous is rate-limited) |
 | `SPEND_CAP_TURNS_PER_HOUR` | `120` | Abuse guard: max agent turns per hour |
 | `PORT` | `9000` | HTTP server port (autopilot backend) |
 
@@ -142,13 +142,16 @@ This exposes three tools: `search_law`, `get_law_node`, `list_coverage`.
 
 ```bash
 cd widget
-npm run build               # outputs dist/corpus-widget.js
+npm run build               # outputs dist/widget.js (loader) and dist/widget-app.js (app)
 ```
 
-Embed in any page:
+Embed in any page using the hosted loader. Point `src` at the Corpus host (a relative
+path would 404 on the host page's own origin) and pass your widget key (`pk_…`):
 
 ```html
-<script src="dist/corpus-widget.js" data-corpus-key="YOUR_CORPUS_API_KEY"></script>
+<script async src="https://corpuslaw.us/widget/widget.js"
+        data-corpus-key="pk_live_…"
+        data-corpus-origin="https://corpuslaw.us"></script>
 ```
 
 ## Deploy to Alibaba Cloud
