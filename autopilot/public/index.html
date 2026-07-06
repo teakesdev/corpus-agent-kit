@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Formation Autopilot — corpus-agent-kit</title>
+<style>
+  :root { font-family: Georgia, serif; }
+  body { max-width: 760px; margin: 2rem auto; padding: 0 1rem; background: #faf6ef; color: #2b2117; }
+  h1 { font-size: 1.4rem; } h1 small { color: #8a7b66; font-weight: normal; }
+  #log { border: 1px solid #d8cdb8; background: #fff; padding: 1rem; min-height: 320px; white-space: pre-wrap; }
+  .u { color: #1f4e79; margin: .5rem 0; } .a { color: #2b2117; margin: .5rem 0; }
+  .handoff { display: inline-block; margin-top: .75rem; padding: .5rem .9rem; background: #1e6b3a; color: #fff; text-decoration: none; border-radius: 4px; }
+  form { display: flex; gap: .5rem; margin-top: .75rem; }
+  input { flex: 1; padding: .6rem; border: 1px solid #d8cdb8; font: inherit; }
+  button { padding: .6rem 1rem; font: inherit; cursor: pointer; }
+  .note { font-size: .85rem; color: #8a7b66; margin-top: 1rem; }
+</style>
+</head>
+<body>
+<h1>Formation Autopilot <small>· open-source · powered by Qwen Cloud + corpuslaw.us</small></h1>
+<div id="log"></div>
+<form id="f"><input id="q" placeholder="Describe your business — e.g. "I bake sourdough at home in Jackson, MS and want to sell it"" autofocus /><button>Send</button></form>
+<p class="note">The autopilot researches real law (with citations) and prepares your formation draft.
+Payment, human review, and the actual state filing happen on corpuslaw.us after handoff — this agent never files or charges anything.</p>
+<script>
+const log = document.getElementById("log");
+const history = [];
+function add(cls, text) { const d = document.createElement("div"); d.className = cls; d.textContent = (cls === "u" ? "You: " : "Autopilot: ") + text; log.appendChild(d); d.scrollIntoView(); return d; }
+document.getElementById("f").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const q = document.getElementById("q");
+  const text = q.value.trim(); if (!text) return;
+  q.value = ""; history.push({ role: "user", content: text }); add("u", text);
+  const thinking = add("a", "…");
+  try {
+    const res = await fetch("/api/chat", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ messages: history }) });
+    const data = await res.json();
+    thinking.textContent = "Autopilot: " + (data.reply || data.error || "(no reply)");
+    if (data.reply) history.push({ role: "assistant", content: data.reply });
+    if (data.handoffUrl) { const a = document.createElement("a"); a.className = "handoff"; a.href = data.handoffUrl; a.target = "_blank"; a.textContent = "Continue on corpuslaw.us → human-approved filing"; log.appendChild(a); }
+  } catch (err) { thinking.textContent = "Autopilot: request failed — " + err; }
+});
+</script>
+</body>
+</html>
