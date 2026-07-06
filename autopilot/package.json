@@ -4,7 +4,8 @@
   "license": "Apache-2.0",
   "type": "module",
   "scripts": {
-    "build": "tsc",
+    "build": "tsc && cp src/eval/scenarios.json dist/eval/",
+    "eval": "tsc && node dist/eval/smoke.js",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "start": "node dist/server.js",

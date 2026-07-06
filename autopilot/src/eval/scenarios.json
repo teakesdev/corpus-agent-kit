@@ -1,0 +1,18 @@
+[
+  {
+    "name": "MS home bakery LLC",
+    "turns": [
+      "I bake sourdough bread at home in Jackson, Mississippi and people started paying me. What do I need to do to make it a real business?",
+      "Let's do an LLC. Call it Magnolia Loaf LLC. My email is founder@example.com."
+    ],
+    "expect": { "toolCalledAnyOf": ["search_law"], "handoffContains": ["US-MS", "llc"] }
+  },
+  {
+    "name": "WY nonprofit",
+    "turns": [
+      "Three of us in Cheyenne want to start a nonprofit teaching kids to code.",
+      "Yes, a nonprofit in Wyoming. Name it Code Frontier. Email board@example.com."
+    ],
+    "expect": { "toolCalledAnyOf": ["search_law", "lookup_naics"], "handoffContains": ["US-WY", "nonprofit"] }
+  }
+]
