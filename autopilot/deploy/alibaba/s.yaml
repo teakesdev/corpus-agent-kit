@@ -1,0 +1,37 @@
+# Alibaba Cloud Function Compute (FC 3.0) — custom runtime running the
+# Formation Autopilot Node server. This file is the hackathon's required
+# proof-of-Alibaba-Cloud code artifact.
+edition: 3.0.0
+name: corpus-agent-kit
+access: default
+
+resources:
+  autopilot:
+    component: fc3
+    props:
+      region: us-west-1
+      functionName: formation-autopilot
+      description: Formation Autopilot (corpus-agent-kit) — Qwen hackathon Track 4
+      runtime: custom.debian10
+      cpu: 0.35
+      memorySize: 512
+      diskSize: 512
+      timeout: 120
+      instanceConcurrency: 10
+      customRuntimeConfig:
+        command: ["node", "dist/server.js"]
+        port: 9000
+      environmentVariables:
+        QWEN_API_KEY: ${env(QWEN_API_KEY)}
+        QWEN_BASE_URL: ${env(QWEN_BASE_URL)}
+        QWEN_MODEL_FAST: ${env(QWEN_MODEL_FAST)}
+        QWEN_MODEL_CRITICAL: ${env(QWEN_MODEL_CRITICAL)}
+        CORPUS_BASE_URL: ${env(CORPUS_BASE_URL)}
+        SPEND_CAP_TURNS_PER_HOUR: "120"
+      code: ../..
+      triggers:
+        - triggerName: http
+          triggerType: http
+          triggerConfig:
+            authType: anonymous
+            methods: [GET, POST]
