@@ -94,6 +94,11 @@ const REVIEW_SYSTEM = `You are the pre-handoff reviewer. Given the conversation 
 return ONLY a corrected JSON object with keys v(=1), entityType, jurisdiction, proposedName?, contactEmail?, naicsCode?.
 Fix obvious inconsistencies (e.g. state named in conversation differs from draft). No commentary.`;
 
+/** Strip a leading/trailing ``` or ```json fence (Qwen models often wrap JSON in one). */
+function extractJson(text: string): string {
+  return text.trim().replace(/^```(?:json)?\s*/, "").replace(/\s*```$/, "").trim();
+}
+
 interface Deps {
   chat?: typeof realChat;
 }
@@ -154,7 +159,7 @@ export async function runAutopilot(
         }
         let reviewed: unknown = { v: 1, ...args };
         try {
-          reviewed = JSON.parse(reviewText);
+          reviewed = JSON.parse(extractJson(reviewText));
         } catch {
           /* fall back to the un-reviewed args; validateDraft still gates */
         }

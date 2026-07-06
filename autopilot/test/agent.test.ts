@@ -70,6 +70,40 @@ describe("runAutopilot", () => {
     expect(res.reply).toMatch(/fast lane/);
   });
 
+  it("critical-lane review parses fenced JSON and uses reviewed draft over tool-call args", async () => {
+    // Tool-call args use US-MS; the critical lane returns fenced JSON with US-WY.
+    // The reviewed jurisdiction (US-WY) must win — proving the fence-stripped parse
+    // path is used, not the silent fallback to raw args.
+    const fakeChat = async (lane: string, messages: any[]) => {
+      if (lane === "critical") {
+        return fakeCompletion({
+          role: "assistant",
+          content: "```json\n{\"v\":1,\"entityType\":\"llc\",\"jurisdiction\":\"US-WY\",\"proposedName\":\"Fenced LLC\"}\n```",
+        });
+      }
+      const last = messages[messages.length - 1];
+      if (last.role === "tool") return fakeCompletion({ role: "assistant", content: "Handoff ready." });
+      return fakeCompletion({
+        role: "assistant",
+        content: null,
+        tool_calls: [{
+          id: "t5",
+          type: "function",
+          function: {
+            name: "finalize_handoff",
+            arguments: JSON.stringify({ entityType: "llc", jurisdiction: "US-MS", proposedName: "Original LLC" }),
+          },
+        }],
+      });
+    };
+    const res = await runAutopilot([{ role: "user", content: "file in Wyoming" }], { chat: fakeChat as any });
+    expect(res.handoffUrl).toMatch(/\/formation\?prefill=/);
+    const b64 = res.handoffUrl!.split("prefill=")[1];
+    const prefill = JSON.parse(Buffer.from(b64, "base64url").toString());
+    expect(prefill.jurisdiction).toBe("US-WY");
+    expect(prefill.proposedName).toBe("Fenced LLC");
+  });
+
   it("caps the loop at 8 turns", async () => {
     const fakeChat = async () =>
       fakeCompletion({
