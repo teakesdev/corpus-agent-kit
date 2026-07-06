@@ -104,6 +104,69 @@ describe("runAutopilot", () => {
     expect(prefill.proposedName).toBe("Fenced LLC");
   });
 
+  it("repeat-call guard: identical search_law call is not re-fetched and surfaces a dedupe message", async () => {
+    const fetchMock = vi.fn(async () =>
+      new Response(
+        JSON.stringify({
+          jsonrpc: "2.0",
+          id: 1,
+          result: { content: [{ type: "text", text: "§ 79-29-101 — Mississippi LLC Act…" }] },
+        }),
+      ),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+
+    const fakeChat = async (_lane: string, messages: any[]) => {
+      const last = messages[messages.length - 1];
+      // After the dedupe message, return a final text so the loop exits cleanly
+      if (last.role === "tool" && String(last.content).includes("already made this exact call")) {
+        return fakeCompletion({ role: "assistant", content: "Got it, using existing results." });
+      }
+      // After any ordinary tool result, re-issue the SAME search_law call (simulates a stuck loop)
+      if (last.role === "tool") {
+        return fakeCompletion({
+          role: "assistant",
+          content: null,
+          tool_calls: [
+            {
+              id: "t2",
+              type: "function",
+              function: {
+                name: "search_law",
+                arguments: JSON.stringify({ query: "llc fee", jurisdiction: "MS" }),
+              },
+            },
+          ],
+        });
+      }
+      // First turn: issue a search_law call
+      return fakeCompletion({
+        role: "assistant",
+        content: null,
+        tool_calls: [
+          {
+            id: "t1",
+            type: "function",
+            function: {
+              name: "search_law",
+              arguments: JSON.stringify({ query: "llc fee", jurisdiction: "MS" }),
+            },
+          },
+        ],
+      });
+    };
+
+    const res = await runAutopilot(
+      [{ role: "user", content: "I want to form an LLC in MS" }],
+      { chat: fakeChat as any },
+    );
+
+    // The second identical call must NOT have invoked fetch (guard swallowed it)
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    // The dedupe string must have been visible to the model (it drove the final reply)
+    expect(res.reply).toContain("existing results");
+  });
+
   it("caps the loop at 8 turns", async () => {
     const fakeChat = async () =>
       fakeCompletion({

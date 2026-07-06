@@ -22,7 +22,11 @@ Rules:
 - Use lookup_naics for the business activity code. Use format_checklist to render any checklist.
 - When you have entityType, jurisdiction (US-XX), and ideally a proposed name, call finalize_handoff.
   Payment, human review, and the actual state filing all happen on the hosted platform after handoff —
-  make that explicit to the founder.`;
+  make that explicit to the founder.
+- The moment the founder has stated entity type and state, call finalize_handoff — do not run more searches first.
+  Research supports the checklist; it must never delay the handoff.
+- Budget: at most 3 search_law calls per user turn. If a search returns a "temporarily unavailable" message,
+  do NOT retry it — proceed with what you have.`;
 
 const TOOLS: OpenAI.ChatCompletionTool[] = [
   {
@@ -103,6 +107,14 @@ interface Deps {
   chat?: typeof realChat;
 }
 
+/** Produce a stable JSON key for a tool-call args object (sorted keys). */
+function canonicalArgs(args: unknown): string {
+  if (typeof args !== "object" || args === null) return JSON.stringify(args);
+  const sorted: Record<string, unknown> = {};
+  for (const k of Object.keys(args as object).sort()) sorted[k] = (args as Record<string, unknown>)[k];
+  return JSON.stringify(sorted);
+}
+
 export async function runAutopilot(
   history: { role: "user" | "assistant"; content: string }[],
   deps: Deps = {},
@@ -111,6 +123,7 @@ export async function runAutopilot(
   const messages: OpenAI.ChatCompletionMessageParam[] = [{ role: "system", content: SYSTEM }, ...history];
   const toolCalls: string[] = [];
   let handoffUrl: string | undefined;
+  const dispatchedCalls = new Set<string>();
 
   for (let turn = 0; turn < 8; turn++) {
     const completion = await chat("fast", messages, TOOLS);
@@ -129,6 +142,20 @@ export async function runAutopilot(
       } catch {
         /* leave args empty; tool will report */
       }
+
+      // Repeat-call guard: identical (name, args) pairs are not re-executed.
+      const callKey = `${name}:${canonicalArgs(args)}`;
+      if (dispatchedCalls.has(callKey)) {
+        messages.push({
+          role: "tool",
+          tool_call_id: call.id,
+          content:
+            "You already made this exact call. Use the results you have. If you have the founder's entity type and state, call finalize_handoff now.",
+        });
+        continue;
+      }
+      dispatchedCalls.add(callKey);
+
       let result: string;
       if (name === "search_law") {
         result = await searchLaw(String(args.query ?? ""), args.jurisdiction ? String(args.jurisdiction) : undefined);
