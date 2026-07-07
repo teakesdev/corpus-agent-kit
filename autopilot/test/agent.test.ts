@@ -167,6 +167,30 @@ describe("runAutopilot", () => {
     expect(res.reply).toContain("existing results");
   });
 
+  it("returns the rendered checklist even when the model doesn't echo it", async () => {
+    let n = 0;
+    const fakeChat = async (_lane: string) => {
+      n++;
+      if (n === 1) {
+        return fakeCompletion({
+          role: "assistant",
+          content: null,
+          tool_calls: [{
+            id: "c1",
+            type: "function",
+            function: {
+              name: "format_checklist",
+              arguments: JSON.stringify({ items: [{ task: "Register as a cottage food operation", citation: "Miss. Code § 75-29-951" }] }),
+            },
+          }],
+        });
+      }
+      return fakeCompletion({ role: "assistant", content: "You've now received a fully cited checklist." });
+    };
+    const res = await runAutopilot([{ role: "user", content: "what does MS require?" }], { chat: fakeChat as any });
+    expect(res.checklist).toContain("1. Register as a cottage food operation (Miss. Code § 75-29-951)");
+  });
+
   it("drops a fabricated contactEmail the founder never typed; keeps one they did", async () => {
     const makeChat = (email: string) => async (lane: string, messages: any[]) => {
       if (lane === "critical") {

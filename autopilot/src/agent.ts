@@ -9,6 +9,10 @@ export interface AutopilotResult {
   reply: string;
   handoffUrl?: string;
   toolCalls: string[];
+  /** Rendered output of the last format_checklist call this turn — the UI shows
+   *  it directly, so the cited checklist appears even when the model narrates
+   *  around it instead of echoing it. */
+  checklist?: string;
 }
 
 const SYSTEM = `You are Formation Autopilot, an open-source agent for the Corpus legal platform (corpuslaw.us).
@@ -130,6 +134,7 @@ export async function runAutopilot(
   const messages: OpenAI.ChatCompletionMessageParam[] = [{ role: "system", content: SYSTEM }, ...history];
   const toolCalls: string[] = [];
   let handoffUrl: string | undefined;
+  let checklist: string | undefined;
   const dispatchedCalls = new Set<string>();
   // The SYSTEM prompt's "at most 3 search_law calls per user turn" enforced in
   // code — qwen-flash sometimes ignores the rule and search-spirals until the
@@ -142,7 +147,7 @@ export async function runAutopilot(
     const msg = completion.choices[0]?.message;
     if (!msg) break;
     if (!msg.tool_calls?.length) {
-      return { reply: msg.content ?? "", handoffUrl, toolCalls };
+      return { reply: msg.content ?? "", handoffUrl, toolCalls, checklist };
     }
     messages.push(msg as OpenAI.ChatCompletionMessageParam);
     for (const call of msg.tool_calls) {
@@ -183,6 +188,7 @@ export async function runAutopilot(
         result = JSON.stringify(lookupNaics(String(args.description ?? "")));
       } else if (name === "format_checklist") {
         result = formatChecklist((args.items ?? []) as ChecklistItem[]);
+        checklist = result;
       } else if (name === "finalize_handoff") {
         // Gate-critical step: normalize on the flagship lane, then validate
         // deterministically. Critical-lane failure → retry once → fast lane
@@ -244,5 +250,6 @@ export async function runAutopilot(
       (handoffUrl ?? "https://corpuslaw.us/formation") + ".",
     handoffUrl,
     toolCalls,
+    checklist,
   };
 }
