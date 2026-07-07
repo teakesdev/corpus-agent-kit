@@ -18,10 +18,15 @@ resources:
       diskSize: 512
       timeout: 120
       instanceConcurrency: 10
+      # custom.debian10 ships no Node — the official Nodejs20 layer provides it
+      # (extracted under /opt; PATH below makes it resolvable).
+      layers:
+        - acs:fc:us-west-1:official:layers/Nodejs20/versions/3
       customRuntimeConfig:
         command: ["node", "dist/server.js"]
         port: 9000
       environmentVariables:
+        PATH: /opt/nodejs20/bin:/usr/local/bin:/usr/local/sbin:/usr/bin:/usr/sbin:/bin:/sbin
         QWEN_API_KEY: ${env(QWEN_API_KEY)}
         QWEN_BASE_URL: ${env(QWEN_BASE_URL)}
         QWEN_MODEL_FAST: ${env(QWEN_MODEL_FAST)}
