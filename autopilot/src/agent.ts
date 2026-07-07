@@ -20,11 +20,18 @@ Rules:
   say what the law requires and cite it.
 - Ask ONE clarifying question at a time when the description is ambiguous (state? entity type? name?).
 - Use lookup_naics for the business activity code. Use format_checklist to render any checklist.
+- When format_checklist returns, reproduce its full numbered checklist (with every citation) verbatim in
+  your reply — never summarize it away or replace it with more questions.
 - When you have entityType, jurisdiction (US-XX), and ideally a proposed name, call finalize_handoff.
   Payment, human review, and the actual state filing all happen on the hosted platform after handoff —
   make that explicit to the founder.
 - The moment the founder has stated entity type and state, call finalize_handoff — do not run more searches first.
-  Research supports the checklist; it must never delay the handoff.
+  Research supports the checklist; it must never delay the handoff. (One exception: if search_law has not
+  been called at all in this conversation, make exactly ONE search_law call for the formation requirements,
+  then finalize_handoff in the same turn — the founder must get at least one cited fact.)
+- If the founder explicitly asks you to prepare or finalize the handoff, your FIRST tool call that turn
+  MUST be finalize_handoff — no search_law or lookup_naics calls first. Everything you need is already
+  in the conversation.
 - Budget: at most 3 search_law calls per user turn. If a search returns a "temporarily unavailable" message,
   do NOT retry it — proceed with what you have.`;
 
@@ -124,6 +131,11 @@ export async function runAutopilot(
   const toolCalls: string[] = [];
   let handoffUrl: string | undefined;
   const dispatchedCalls = new Set<string>();
+  // The SYSTEM prompt's "at most 3 search_law calls per user turn" enforced in
+  // code — qwen-flash sometimes ignores the rule and search-spirals until the
+  // loop cap, never reaching finalize_handoff.
+  const SEARCH_BUDGET = 3;
+  let searchesExecuted = 0;
 
   for (let turn = 0; turn < 8; turn++) {
     const completion = await chat("fast", messages, TOOLS);
@@ -158,7 +170,15 @@ export async function runAutopilot(
 
       let result: string;
       if (name === "search_law") {
-        result = await searchLaw(String(args.query ?? ""), args.jurisdiction ? String(args.jurisdiction) : undefined);
+        if (searchesExecuted >= SEARCH_BUDGET) {
+          result =
+            "Search budget for this reply is exhausted — do NOT search again. Use the results you already have. " +
+            "If the founder has stated entity type and state, call finalize_handoff now; " +
+            "otherwise ask your single most important clarifying question.";
+        } else {
+          searchesExecuted++;
+          result = await searchLaw(String(args.query ?? ""), args.jurisdiction ? String(args.jurisdiction) : undefined);
+        }
       } else if (name === "lookup_naics") {
         result = JSON.stringify(lookupNaics(String(args.description ?? "")));
       } else if (name === "format_checklist") {
@@ -192,6 +212,15 @@ export async function runAutopilot(
         }
         const validated = validateDraft(reviewed);
         if (validated.ok) {
+          // An email the founder never typed is a model fabrication (placeholder
+          // addresses like founder@example.com show up in finalize args) — drop it
+          // rather than prefill the hosted form with it.
+          if (
+            validated.draft.contactEmail &&
+            !history.some((m) => m.content.toLowerCase().includes(validated.draft.contactEmail!.toLowerCase()))
+          ) {
+            delete validated.draft.contactEmail;
+          }
           handoffUrl = buildHandoffUrl(validated.draft);
           result =
             `Handoff ready: ${handoffUrl}\n` +
@@ -201,7 +230,11 @@ export async function runAutopilot(
           result = `Draft incomplete: ${validated.errors.join("; ")}. Ask the founder for the missing field(s).`;
         }
       } else {
-        result = `Unknown tool: ${name}`;
+        // qwen-flash occasionally invents tools it saw named in search results
+        // (e.g. the hosted MCP server's list_coverage) — redirect, don't dead-end.
+        result =
+          `Unknown tool: ${name}. Your ONLY tools are search_law, lookup_naics, format_checklist, ` +
+          `and finalize_handoff. If the founder has stated entity type and state, call finalize_handoff now.`;
       }
       messages.push({ role: "tool", tool_call_id: call.id, content: result });
     }

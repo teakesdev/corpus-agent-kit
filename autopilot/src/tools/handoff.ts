@@ -13,9 +13,12 @@ export interface HandoffDraft {
 export function validateDraft(raw: unknown): { ok: true; draft: HandoffDraft } | { ok: false; errors: string[] } {
   const errors: string[] = [];
   const src = (raw ?? {}) as Record<string, unknown>;
-  const entityType = src.entityType === "llc" || src.entityType === "nonprofit" ? src.entityType : null;
+  // Models emit "LLC" / "us-ms" as often as the canonical casing — normalize, don't reject.
+  const entityRaw = typeof src.entityType === "string" ? src.entityType.trim().toLowerCase() : "";
+  const entityType = entityRaw === "llc" || entityRaw === "nonprofit" ? entityRaw : null;
   if (!entityType) errors.push("entityType must be 'llc' or 'nonprofit'");
-  const jurisdiction = typeof src.jurisdiction === "string" && /^US-[A-Z]{2}$/.test(src.jurisdiction) ? src.jurisdiction : null;
+  const jurisRaw = typeof src.jurisdiction === "string" ? src.jurisdiction.trim().toUpperCase() : "";
+  const jurisdiction = /^US-[A-Z]{2}$/.test(jurisRaw) ? jurisRaw : null;
   if (!jurisdiction) errors.push("jurisdiction must look like 'US-MS'");
   if (errors.length) return { ok: false, errors };
   const draft: HandoffDraft = { v: 1, entityType: entityType!, jurisdiction: jurisdiction! };

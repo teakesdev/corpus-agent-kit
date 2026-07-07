@@ -23,12 +23,16 @@ let failed = 0;
 for (const s of scenarios as any[]) {
   const history: { role: "user" | "assistant"; content: string }[] = [];
   let last: Awaited<ReturnType<typeof runAutopilot>> | null = null;
+  const allTools: string[] = [];
   for (const turn of s.turns) {
     history.push({ role: "user", content: turn });
     last = await runAutopilot(history);
     history.push({ role: "assistant", content: last.reply });
+    allTools.push(...last.toolCalls);
   }
-  const toolOk = s.expect.toolCalledAnyOf.some((t: string) => last!.toolCalls.includes(t));
+  // toolCalledAnyOf is about the whole conversation — finalize-first turns are
+  // allowed (encouraged) to skip research on the final turn.
+  const toolOk = s.expect.toolCalledAnyOf.some((t: string) => allTools.includes(t));
   const decoded = last!.handoffUrl
     ? Buffer.from(new URL(last!.handoffUrl).searchParams.get("prefill")!, "base64url").toString()
     : "";

@@ -8,6 +8,15 @@
     "expect": { "toolCalledAnyOf": ["search_law"], "handoffContains": ["US-MS", "llc"] }
   },
   {
+    "name": "MS sourdough — checklist-first pacing (demo spine)",
+    "turns": [
+      "I sell sourdough from my apartment in Gulfport, Mississippi and want to make it official. Maybe an LLC? It's just me.",
+      "Before we pick anything — what does Mississippi law actually require for me to sell food made in my home kitchen? Give me the checklist.",
+      "Perfect. Let's do the LLC — call it Gulf Coast Sourdough LLC. Prepare my handoff."
+    ],
+    "expect": { "toolCalledAnyOf": ["finalize_handoff"], "handoffContains": ["US-MS", "llc", "Gulf Coast Sourdough LLC"] }
+  },
+  {
     "name": "WY nonprofit",
     "turns": [
       "Three of us in Cheyenne want to start a nonprofit teaching kids to code.",

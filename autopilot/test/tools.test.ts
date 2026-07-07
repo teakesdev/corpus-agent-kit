@@ -63,6 +63,13 @@ describe("handoff", () => {
     expect(decoded.jurisdiction).toBe("US-MS");
     expect(decoded.llc.naicsCode).toBe("311811");
   });
+  it("normalizes model casing (LLC / us-ms) instead of rejecting the draft", () => {
+    const res = validateDraft({ v: 1, entityType: "LLC", jurisdiction: "us-ms", proposedName: "Gulf Coast Sourdough LLC" });
+    expect(res.ok).toBe(true);
+    if (!res.ok) return;
+    expect(res.draft.entityType).toBe("llc");
+    expect(res.draft.jurisdiction).toBe("US-MS");
+  });
   it("never passes unknown keys through (no PII smuggling)", () => {
     const res = validateDraft({ v: 1, entityType: "llc", jurisdiction: "US-MS", ssn: "123-45-6789" } as any);
     expect(res.ok).toBe(true);

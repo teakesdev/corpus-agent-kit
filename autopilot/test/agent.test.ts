@@ -167,6 +167,63 @@ describe("runAutopilot", () => {
     expect(res.reply).toContain("existing results");
   });
 
+  it("drops a fabricated contactEmail the founder never typed; keeps one they did", async () => {
+    const makeChat = (email: string) => async (lane: string, messages: any[]) => {
+      if (lane === "critical") {
+        return fakeCompletion({ role: "assistant", content: JSON.stringify({ v: 1, entityType: "llc", jurisdiction: "US-MS", contactEmail: email }) });
+      }
+      const last = messages[messages.length - 1];
+      if (last.role === "tool") return fakeCompletion({ role: "assistant", content: "Handoff ready." });
+      return fakeCompletion({
+        role: "assistant",
+        content: null,
+        tool_calls: [{ id: "t9", type: "function", function: { name: "finalize_handoff", arguments: JSON.stringify({ entityType: "llc", jurisdiction: "US-MS", contactEmail: email }) } }],
+      });
+    };
+    const decode = (url: string) => JSON.parse(Buffer.from(url.split("prefill=")[1], "base64url").toString());
+
+    const fabricated = await runAutopilot([{ role: "user", content: "LLC in Mississippi please" }], { chat: makeChat("founder@example.com") as any });
+    expect(decode(fabricated.handoffUrl!).contactEmail).toBeUndefined();
+
+    const genuine = await runAutopilot([{ role: "user", content: "LLC in Mississippi — reach me at Ty@Bakery.com" }], { chat: makeChat("ty@bakery.com") as any });
+    expect(decode(genuine.handoffUrl!).contactEmail).toBe("ty@bakery.com");
+  });
+
+  it("enforces the 3-search budget in code: 4th distinct search_law is not fetched", async () => {
+    const fetchMock = vi.fn(async () =>
+      new Response(
+        JSON.stringify({
+          jsonrpc: "2.0",
+          id: 1,
+          result: { content: [{ type: "text", text: "§ 75-29-951 — cottage food…" }] },
+        }),
+      ),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+
+    let n = 0;
+    let budgetMsgSeen = "";
+    const fakeChat = async (_lane: string, messages: any[]) => {
+      const last = messages[messages.length - 1];
+      if (last.role === "tool" && /search budget/i.test(String(last.content))) budgetMsgSeen = String(last.content);
+      n++;
+      if (n <= 5) {
+        return fakeCompletion({
+          role: "assistant",
+          content: null,
+          tool_calls: [{ id: "s" + n, type: "function", function: { name: "search_law", arguments: JSON.stringify({ query: "distinct query " + n }) } }],
+        });
+      }
+      return fakeCompletion({ role: "assistant", content: "Here is what the law requires." });
+    };
+
+    const res = await runAutopilot([{ role: "user", content: "I bake bread in Jackson MS" }], { chat: fakeChat as any });
+    // Only the first 3 distinct searches hit the network; 4 and 5 got the budget message.
+    expect(fetchMock).toHaveBeenCalledTimes(3);
+    expect(budgetMsgSeen).toMatch(/finalize_handoff/);
+    expect(res.reply).toContain("law requires");
+  });
+
   it("caps the loop at 8 turns", async () => {
     const fakeChat = async () =>
       fakeCompletion({
