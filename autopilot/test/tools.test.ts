@@ -63,6 +63,22 @@ describe("handoff", () => {
     expect(decoded.jurisdiction).toBe("US-MS");
     expect(decoded.llc.naicsCode).toBe("311811");
   });
+  it("normalizes verbose entityType and non-canonical jurisdictions", () => {
+    const nonprofit = validateDraft({ v: 1, entityType: "501(c)(3) nonprofit", jurisdiction: "Wyoming" });
+    expect(nonprofit.ok).toBe(true);
+    if (nonprofit.ok) {
+      expect(nonprofit.draft.entityType).toBe("nonprofit");
+      expect(nonprofit.draft.jurisdiction).toBe("US-WY");
+    }
+    const llc = validateDraft({ v: 1, entityType: "Limited Liability Company (LLC)", jurisdiction: "MS" });
+    expect(llc.ok).toBe(true);
+    if (llc.ok) {
+      expect(llc.draft.entityType).toBe("llc");
+      expect(llc.draft.jurisdiction).toBe("US-MS");
+    }
+    expect(validateDraft({ v: 1, entityType: "corporation", jurisdiction: "US-MS" }).ok).toBe(false);
+    expect(validateDraft({ v: 1, entityType: "llc", jurisdiction: "Narnia" }).ok).toBe(false);
+  });
   it("normalizes model casing (LLC / us-ms) instead of rejecting the draft", () => {
     const res = validateDraft({ v: 1, entityType: "LLC", jurisdiction: "us-ms", proposedName: "Gulf Coast Sourdough LLC" });
     expect(res.ok).toBe(true);
