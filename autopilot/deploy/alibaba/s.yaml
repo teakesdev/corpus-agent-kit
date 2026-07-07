@@ -39,4 +39,4 @@ resources:
           triggerType: http
           triggerConfig:
             authType: anonymous
-            methods: [GET, POST]
+            methods: [GET, POST, OPTIONS]

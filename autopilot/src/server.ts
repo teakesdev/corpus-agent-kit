@@ -27,6 +27,20 @@ export function createServer(deps: Deps = {}): http.Server {
   }
   return http.createServer(async (req, res) => {
     try {
+      // The demo page may be hosted off-origin (FC's default fcapp.run domain
+      // force-downloads text/html via an injected Content-Disposition header),
+      // so the API must be callable cross-origin. Public read-only demo — "*".
+      res.setHeader("Access-Control-Allow-Origin", "*");
+      if (req.method === "OPTIONS") {
+        res
+          .writeHead(204, {
+            "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+            "Access-Control-Allow-Headers": "Content-Type",
+            "Access-Control-Max-Age": "86400",
+          })
+          .end();
+        return;
+      }
       if (req.method === "GET" && req.url === "/healthz") {
         res.writeHead(200, { "Content-Type": "text/plain" }).end("ok");
         return;

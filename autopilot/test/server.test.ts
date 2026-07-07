@@ -27,6 +27,19 @@ describe("server", () => {
     expect(res.status).toBe(200);
     expect((await res.json()).reply).toBe("hi");
   });
+  it("answers CORS preflight and sets allow-origin on responses", async () => {
+    const base = await start({ run: async () => ({ reply: "hi", toolCalls: [] }) });
+    const pre = await fetch(`${base}/api/chat`, { method: "OPTIONS" });
+    expect(pre.status).toBe(204);
+    expect(pre.headers.get("access-control-allow-origin")).toBe("*");
+    expect(pre.headers.get("access-control-allow-headers")).toContain("Content-Type");
+    const res = await fetch(`${base}/api/chat`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ messages: [{ role: "user", content: "hello" }] }),
+    });
+    expect(res.headers.get("access-control-allow-origin")).toBe("*");
+  });
   it("rejects malformed bodies with 400", async () => {
     const base = await start({ run: async () => ({ reply: "x", toolCalls: [] }) });
     const res = await fetch(`${base}/api/chat`, { method: "POST", body: "not json" });
