@@ -1,5 +1,11 @@
 # corpus-agent-kit
 
+**Live demo:** [corpuslaw.us/autopilot](https://corpuslaw.us/autopilot) — the Formation
+Autopilot chat, backed by this repo's agent running on **Alibaba Cloud Function Compute**
+(`us-west-1`, config in [`autopilot/deploy/alibaba/s.yaml`](autopilot/deploy/alibaba/s.yaml)).
+API health: `curl https://formatiutopilot-bfmjghskwt.us-west-1.fcapp.run/healthz` → `ok`.
+(The raw `fcapp.run` URL force-downloads HTML on FC's default domain — use the hosted page in a browser.)
+
 Open-source connector kit for the [Corpus legal platform](https://corpuslaw.us):
 
 - **autopilot/** — Formation Autopilot: a Qwen Cloud agent that turns an ambiguous
