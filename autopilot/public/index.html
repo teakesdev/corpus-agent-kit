@@ -29,7 +29,16 @@ Payment, human review, and the actual state filing happen on corpuslaw.us after 
 <script>
 const log = document.getElementById("log");
 const history = [];
-function add(cls, text) { const d = document.createElement("div"); d.className = cls; d.textContent = (cls === "u" ? "You: " : "Autopilot: ") + text; log.appendChild(d); d.scrollIntoView(); return d; }
+// Render **bold** as <strong> via DOM nodes (never innerHTML — replies are model output).
+function setMsg(el, prefix, text) {
+  el.replaceChildren(prefix);
+  const parts = String(text).split(/\*\*([^*]+)\*\*/g);
+  parts.forEach((p, i) => {
+    if (i % 2) { const b = document.createElement("strong"); b.textContent = p; el.append(b); }
+    else if (p) el.append(p);
+  });
+}
+function add(cls, text) { const d = document.createElement("div"); d.className = cls; setMsg(d, cls === "u" ? "You: " : "Autopilot: ", text); log.appendChild(d); d.scrollIntoView(); return d; }
 document.getElementById("f").addEventListener("submit", async (e) => {
   e.preventDefault();
   const q = document.getElementById("q");
@@ -39,7 +48,7 @@ document.getElementById("f").addEventListener("submit", async (e) => {
   try {
     const res = await fetch("/api/chat", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ messages: history }) });
     const data = await res.json();
-    thinking.textContent = "Autopilot: " + (data.reply || data.error || "(no reply)");
+    setMsg(thinking, "Autopilot: ", data.reply || data.error || "(no reply)");
     if (Array.isArray(data.toolCalls) && data.toolCalls.length) {
       const trace = document.createElement("div");
       trace.className = "trace";
