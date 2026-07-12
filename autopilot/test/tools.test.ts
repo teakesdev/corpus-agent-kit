@@ -13,6 +13,19 @@ describe("lookupNaics", () => {
     expect(hits[0]).toHaveProperty("code");
   });
   it("returns [] for empty input", () => expect(lookupNaics("")).toEqual([]));
+  // ── Relevance parity with the monorepo scorer (stopwords + plural folding + 2022 dataset) ──
+  it("matches singular query words against plural titles (bakery → Retail Bakeries)", () => {
+    expect(lookupNaics("neighborhood bakery").map((x) => x.code)).toContain("311811");
+  });
+  it("never matches on connector words like 'and' (no Land Subdivision / Hog Farming for a bakery)", () => {
+    const codes = lookupNaics("neighborhood bakery selling bread and cakes").map((x) => x.code);
+    expect(codes).toContain("311811");
+    expect(codes).not.toContain("237210");
+    expect(codes).not.toContain("112210");
+  });
+  it("codes a liquor store from the full Census 2022 dataset", () => {
+    expect(lookupNaics("liquor store")[0]?.code).toBe("445320");
+  });
 });
 
 describe("searchLaw", () => {
