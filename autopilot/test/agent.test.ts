@@ -259,3 +259,16 @@ describe("runAutopilot", () => {
     expect(res.reply).toMatch(/taking longer than expected/i);
   });
 });
+
+describe("international founders prompt block", () => {
+  it("bakes the no-SSN rule and key international facts into the system prompt", async () => {
+    const { SYSTEM } = await import("../src/agent.js");
+    // Deterministic context, not model weights: these facts must ride every conversation.
+    expect(SYSTEM).toMatch(/No US citizenship or US residency is required/);
+    expect(SYSTEM).toMatch(/NEVER ask for, collect, or accept an SSN/);
+    expect(SYSTEM).toMatch(/Form SS-4 by mail or fax/);
+    expect(SYSTEM).toMatch(/1361\(b\)\(1\)\(C\)/);
+    expect(SYSTEM).toMatch(/registered agent/i);
+    expect(SYSTEM).toMatch(/outside this service's scope/);
+  });
+});
