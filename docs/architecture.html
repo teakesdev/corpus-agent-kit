@@ -1,0 +1,202 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=2000, height=1250" />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Playfair+Display:wght@700;900&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  html,body { width:2000px; height:1250px; overflow:hidden; background:#0a0a0a; }
+  body { font-family:"Inter",sans-serif; color:#e8e0c8; position:relative; }
+  .glow { position:absolute; left:400px; top:-300px; width:1400px; height:1000px;
+    background:radial-gradient(closest-side, rgba(212,175,55,0.08) 0%, rgba(212,175,55,0.03) 45%, rgba(212,175,55,0) 72%); }
+  .tick { position:absolute; width:38px; height:38px; }
+  .tick span { position:absolute; background:rgba(212,175,55,0.55); }
+  .tick .h { width:38px; height:2px; } .tick .v { width:2px; height:38px; }
+  .tick.tl{top:34px;left:34px}.tick.tr{top:34px;right:34px}.tick.bl{bottom:34px;left:34px}.tick.br{bottom:34px;right:34px}
+  .tick.tl .h,.tick.tl .v{top:0;left:0}
+  .tick.tr .h{top:0;right:0}.tick.tr .v{top:0;right:0}
+  .tick.bl .h{bottom:0;left:0}.tick.bl .v{bottom:0;left:0}
+  .tick.br .h{bottom:0;right:0}.tick.br .v{bottom:0;right:0}
+
+  .kicker { position:absolute; left:0; right:0; top:44px; text-align:center;
+    font-family:"IBM Plex Mono",monospace; font-size:19px; letter-spacing:9px; color:#9c8438; }
+  .title { position:absolute; left:0; right:0; top:74px; text-align:center;
+    font-family:"Playfair Display",serif; font-weight:900; font-size:54px; letter-spacing:4px; color:#d4af37;
+    text-shadow:0 0 22px rgba(212,175,55,0.25); }
+
+  .zone { position:absolute; border:1px solid rgba(212,175,55,0.28); border-radius:14px; background:rgba(232,224,200,0.02); }
+  .zone-label { position:absolute; top:-15px; left:24px; padding:2px 14px; background:#0a0a0a;
+    font-family:"IBM Plex Mono",monospace; font-size:19px; letter-spacing:3px; color:#d4af37; }
+  .zone-sub { position:absolute; top:-13px; right:24px; padding:2px 10px; background:#0a0a0a;
+    font-family:"IBM Plex Mono",monospace; font-size:15px; letter-spacing:1px; color:#9c8438; }
+
+  .node { position:absolute; border:1.5px solid rgba(212,175,55,0.5); border-radius:10px;
+    background:rgba(20,18,12,0.92); padding:14px 18px; }
+  .node .n-title { font-family:"Inter",sans-serif; font-weight:700; font-size:22px; color:#e8e0c8; }
+  .node .n-sub { font-family:"IBM Plex Mono",monospace; font-size:15px; color:#9c8438; margin-top:5px; line-height:1.45; }
+  .node.dim { border-color:rgba(232,224,200,0.25); }
+  .node.gold { border-color:#d4af37; box-shadow:0 0 26px rgba(212,175,55,0.18); }
+  .node.gold .n-title { color:#d4af37; }
+
+  .lane { position:absolute; border:1.5px dashed rgba(212,175,55,0.45); border-radius:8px; padding:9px 12px; background:rgba(212,175,55,0.05); }
+  .lane .l-t { font-family:"IBM Plex Mono",monospace; font-weight:600; font-size:16px; color:#d4af37; }
+  .lane .l-s { font-family:"IBM Plex Mono",monospace; font-size:14px; color:#9c8438; margin-top:3px; }
+
+  .chip { position:absolute; font-family:"IBM Plex Mono",monospace; font-size:14.5px; color:#e8e0c8;
+    border:1px solid rgba(232,224,200,0.3); border-radius:6px; padding:7px 11px; background:rgba(10,10,10,0.85); }
+
+  .boundary { position:absolute; left:1218px; top:170px; height:930px; width:0;
+    border-left:2.5px dashed rgba(212,175,55,0.75); }
+  .boundary-label { position:absolute; left:1218px; top:1108px; transform:translateX(-50%);
+    font-family:"IBM Plex Mono",monospace; font-size:16px; letter-spacing:2px; color:#d4af37;
+    background:#0a0a0a; padding:4px 16px; border:1px solid rgba(212,175,55,0.4); border-radius:6px; white-space:nowrap; }
+
+  .footer { position:absolute; left:0; right:0; bottom:36px; text-align:center;
+    font-family:"IBM Plex Mono",monospace; font-size:16px; color:#9c8438; letter-spacing:1px; }
+  .footer b { color:#e8e0c8; font-weight:500; }
+
+  svg.wires { position:absolute; inset:0; pointer-events:none; }
+  .wire { stroke:rgba(212,175,55,0.55); stroke-width:2; fill:none; }
+  .wire.strong { stroke:#d4af37; stroke-width:2.5; }
+  .wire.faint { stroke:rgba(232,224,200,0.3); }
+  .wlabel { font-family:"IBM Plex Mono",monospace; font-size:13.5px; fill:#9c8438; }
+  .wlabel.gold { fill:#d4af37; }
+</style>
+</head>
+<body>
+  <div class="glow"></div>
+  <div class="tick tl"><span class="h"></span><span class="v"></span></div>
+  <div class="tick tr"><span class="h"></span><span class="v"></span></div>
+  <div class="tick bl"><span class="h"></span><span class="v"></span></div>
+  <div class="tick br"><span class="h"></span><span class="v"></span></div>
+
+  <div class="kicker">CORPUS-AGENT-KIT &middot; QWEN HACKATHON TRACK 4</div>
+  <div class="title">Open Connectors, Closed Organs</div>
+
+  <!-- ZONE: CLIENTS -->
+  <div class="zone" style="left:56px; top:200px; width:360px; height:640px;">
+    <div class="zone-label">CLIENTS</div>
+    <div class="zone-sub">any surface</div>
+  </div>
+  <div class="node" style="left:80px; top:248px; width:312px;">
+    <div class="n-title">Judge demo page</div>
+    <div class="n-sub">corpuslaw.us/autopilot<br/>hosted chat UI &rarr; FC (CORS)</div>
+  </div>
+  <div class="node dim" style="left:80px; top:420px; width:312px;">
+    <div class="n-title">MCP clients</div>
+    <div class="n-sub">Claude Desktop &middot; Cursor<br/>via corpus-mcp (zero-dep stdio)</div>
+  </div>
+  <div class="node dim" style="left:80px; top:592px; width:312px;">
+    <div class="n-title">Embeddable widget</div>
+    <div class="n-sub">Preact &middot; ~12 kB gzipped<br/>drop-in law search</div>
+  </div>
+
+  <!-- ZONE: QWEN CLOUD -->
+  <div class="zone" style="left:520px; top:200px; width:640px; height:170px; border-color:rgba(212,175,55,0.55);">
+    <div class="zone-label">QWEN CLOUD</div>
+    <div class="zone-sub">model inference</div>
+  </div>
+  <div class="node gold" style="left:548px; top:238px; width:270px;">
+    <div class="n-title">qwen-flash</div>
+    <div class="n-sub">FAST lane &middot; every turn<br/>intent &middot; search &middot; checklist</div>
+  </div>
+  <div class="node gold" style="left:862px; top:238px; width:270px;">
+    <div class="n-title">qwen3.7-max</div>
+    <div class="n-sub">CRITICAL lane &middot; one turn<br/>pre-handoff draft review</div>
+  </div>
+
+  <!-- ZONE: OPEN KIT on Alibaba FC -->
+  <div class="zone" style="left:520px; top:452px; width:640px; height:560px;">
+    <div class="zone-label">ALIBABA CLOUD &middot; FUNCTION COMPUTE 3.0</div>
+    <div class="zone-sub">us-west-1</div>
+  </div>
+  <div class="node gold" style="left:548px; top:500px; width:584px;">
+    <div class="n-title">Formation Autopilot &nbsp;<span style="font-family:'IBM Plex Mono',monospace;font-size:15px;color:#9c8438;">Apache-2.0 &middot; this repo</span></div>
+    <div class="n-sub">Node 20 &middot; custom runtime &middot; HTTP trigger &middot; deploy: autopilot/deploy/alibaba/s.yaml<br/>criticality-based lane routing &middot; code-enforced search budget &middot; never collects SSN/IDs</div>
+  </div>
+  <div class="lane" style="left:548px; top:648px; width:180px;">
+    <div class="l-t">search_law</div>
+    <div class="l-s">live cited law</div>
+  </div>
+  <div class="lane" style="left:750px; top:648px; width:180px;">
+    <div class="l-t">lookup_naics</div>
+    <div class="l-s">Census 2022, local</div>
+  </div>
+  <div class="lane" style="left:952px; top:648px; width:180px;">
+    <div class="l-t">format_checklist</div>
+    <div class="l-s">every line cited</div>
+  </div>
+  <div class="lane" style="left:548px; top:742px; width:280px;">
+    <div class="l-t">finalize_handoff</div>
+    <div class="l-s">flagship review &rarr; prefilled URL</div>
+  </div>
+  <div class="chip" style="left:860px; top:826px;">SPEND_CAP_TURNS_PER_HOUR = 120</div>
+  <div class="chip" style="left:548px; top:888px;">no US citizenship &middot; no SSN needed &mdash; international-founder facts in prompt</div>
+  <div class="chip" style="left:548px; top:948px;">emits a <span style="color:#d4af37;">prefilled draft link</span> only &mdash; cannot pay, cannot file</div>
+
+  <!-- ZONE: HOSTED PLATFORM -->
+  <div class="zone" style="left:1280px; top:200px; width:664px; height:812px;">
+    <div class="zone-label">HOSTED CORPUS PLATFORM</div>
+    <div class="zone-sub">closed &middot; corpuslaw.us</div>
+  </div>
+  <div class="node" style="left:1308px; top:248px; width:608px;">
+    <div class="n-title">/api/mcp &mdash; hybrid law search</div>
+    <div class="n-sub">vector + full-text &middot; cited excerpts &middot; free anonymous tier</div>
+  </div>
+  <div class="node dim" style="left:1308px; top:376px; width:608px;">
+    <div class="n-title">Aurora PostgreSQL</div>
+    <div class="n-sub">491K+ provisions &middot; 18 jurisdictions &middot; pgvector embeddings &middot; official sources</div>
+  </div>
+  <div class="node" style="left:1308px; top:520px; width:608px;">
+    <div class="n-title">/formation?prefill= &mdash; checkout</div>
+    <div class="n-sub">founder reviews exact bundle &middot; Stripe Checkout &middot; payment locks payload to a hash</div>
+  </div>
+  <div class="node gold" style="left:1308px; top:664px; width:608px;">
+    <div class="n-title">&#9878; GATE 2 &mdash; human approval</div>
+    <div class="n-sub">ONE human approves the exact hash-locked payload &mdash; or nothing happens.<br/>A single byte of drift after approval &rarr; the gate rejects.</div>
+  </div>
+  <div class="node dim" style="left:1308px; top:822px; width:608px;">
+    <div class="n-title">State filing execution</div>
+    <div class="n-sub">registered agent bundled &middot; Secretary of State &middot; certificate back to founder</div>
+  </div>
+
+  <!-- TRUST BOUNDARY -->
+  <div class="boundary"></div>
+  <div class="boundary-label">THE AGENT STOPS HERE &mdash; NEVER TOUCHES MONEY &middot; NEVER FILES</div>
+
+  <div class="footer">github.com/teakesdev/corpus-agent-kit &middot; live: <b>corpuslaw.us/autopilot</b> &middot; API: <b>formatiutopilot-bfmjghskwt.us-west-1.fcapp.run</b> &middot; Qwen Cloud API via dashscope-intl (OpenAI-compatible)</div>
+
+  <!-- WIRES -->
+  <svg class="wires" width="2000" height="1250" viewBox="0 0 2000 1250">
+    <defs>
+      <marker id="arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+        <path d="M 0 0 L 10 5 L 0 10 z" fill="#d4af37"/>
+      </marker>
+      <marker id="arrf" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+        <path d="M 0 0 L 10 5 L 0 10 z" fill="rgba(232,224,200,0.5)"/>
+      </marker>
+    </defs>
+    <!-- demo page -> autopilot -->
+    <path class="wire" d="M 392 306 L 470 306 L 470 540 L 544 540" marker-end="url(#arr)"/>
+    <text class="wlabel" x="420" y="470" transform="rotate(-90 420 470)">POST /api/chat</text>
+    <!-- autopilot <-> qwen lanes -->
+    <path class="wire strong" d="M 700 496 L 700 396" marker-end="url(#arr)"/>
+    <path class="wire strong" d="M 990 496 L 990 396" marker-end="url(#arr)"/>
+    <!-- search_law -> /api/mcp -->
+    <path class="wire" d="M 544 676 L 534 676 L 534 1032 L 1240 1032 L 1240 300 L 1304 300" marker-end="url(#arr)"/>
+    <text class="wlabel" x="1252" y="520" transform="rotate(-90 1252 520)">live cited statutes</text>
+    <!-- handoff -> /formation -->
+    <path class="wire strong" d="M 828 770 L 1252 770 L 1252 560 L 1304 560" marker-end="url(#arr)"/>
+    <text class="wlabel gold" x="880" y="760">prefilled draft URL</text>
+    <!-- mcp client + widget -> /api/mcp (around the bottom) -->
+    <path class="wire faint" d="M 392 476 L 452 476 L 452 1056 L 1250 1056 L 1250 316 L 1304 316" marker-end="url(#arrf)"/>
+    <path class="wire faint" d="M 392 648 L 452 648" />
+    <!-- api/mcp -> aurora -->
+    <path class="wire" d="M 1612 344 L 1612 372" marker-end="url(#arr)"/>
+    <!-- checkout -> gate2 -> filing -->
+    <path class="wire strong" d="M 1612 616 L 1612 660" marker-end="url(#arr)"/>
+    <path class="wire strong" d="M 1612 782 L 1612 818" marker-end="url(#arr)"/>
+  </svg>
+</body>
+</html>

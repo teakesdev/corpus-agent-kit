@@ -1,5 +1,13 @@
 ## Architecture
 
+![Architecture diagram](architecture.png)
+
+The rendered diagram above is authored in [`architecture.html`](architecture.html) and
+captured at 2x by [`capture_architecture.py`](capture_architecture.py)
+(`uv run --with playwright python capture_architecture.py`). The Mermaid source below
+is the machine-readable equivalent.
+
+
 ```mermaid
 flowchart LR
   subgraph OPEN["corpus-agent-kit (Apache-2.0, this repo)"]
