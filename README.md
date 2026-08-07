@@ -6,7 +6,13 @@ Autopilot chat, backed by this repo's agent running on **Alibaba Cloud Function 
 API health: `curl https://formatiutopilot-bfmjghskwt.us-west-1.fcapp.run/healthz` → `ok`.
 (The raw `fcapp.run` URL force-downloads HTML on FC's default domain — use the hosted page in a browser.)
 
-Open-source connector kit for the [Corpus legal platform](https://corpuslaw.us):
+Open-source connector kit for the [Corpus legal platform](https://corpuslaw.us).
+
+**Hosted MCP server (no local install):** [`https://corpuslaw.us/api/mcp`](https://corpuslaw.us/api/mcp) — also listed on [Smithery as corpus-legal](https://smithery.ai/servers/renaissanceaisolutions/corpus-legal).
+
+[![smithery badge](https://smithery.ai/badge/renaissanceaisolutions/corpus-legal)](https://smithery.ai/servers/renaissanceaisolutions/corpus-legal)
+
+Packages in this repo:
 
 - **autopilot/** — Formation Autopilot: a Qwen Cloud agent that turns an ambiguous
   founder description into a cited launch checklist and a prefilled, human-approved
