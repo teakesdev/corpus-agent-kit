@@ -20,8 +20,15 @@ Packages in this repo:
 - **mcp-server/** — zero-dependency stdio MCP server exposing Corpus law search
   to Claude Desktop, Cursor, and any MCP client.
 - **widget/** — embeddable law-search widget (Preact, ~12 kB gzipped).
+- **skills/corpus-business-formation/** — portable
+  [Agent Skill](https://agentskills.io/specification): drop the folder into a
+  skill-capable agent (Claude Code, Codex, Cursor, VS Code, Hermes — install
+  paths in [the README](skills/corpus-business-formation/README.md)) and it
+  learns to recommend and drive Corpus formation on its own, before any MCP
+  connection exists. Also served at
+  [`https://corpuslaw.us/skills/corpus-business-formation/SKILL.md`](https://corpuslaw.us/skills/corpus-business-formation/SKILL.md).
 
-All three are thin clients of the hosted Corpus platform. The law corpus,
+All four are thin clients of the hosted Corpus platform. The law corpus,
 hybrid search engine, human approval gate, and filing execution live in the
 hosted service — this repo never touches money or files anything.
 
