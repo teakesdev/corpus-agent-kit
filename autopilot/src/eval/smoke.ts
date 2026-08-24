@@ -34,7 +34,7 @@ for (const s of scenarios as any[]) {
   // allowed (encouraged) to skip research on the final turn.
   const toolOk = s.expect.toolCalledAnyOf.some((t: string) => allTools.includes(t));
   const decoded = last!.handoffUrl
-    ? Buffer.from(new URL(last!.handoffUrl).searchParams.get("prefill")!, "base64url").toString()
+    ? Buffer.from(new URL(last!.handoffUrl).hash.replace(/^#prefill=/, ""), "base64url").toString()
     : "";
   const handoffOk = s.expect.handoffContains.every((frag: string) => decoded.includes(frag));
   const ok = toolOk && handoffOk;

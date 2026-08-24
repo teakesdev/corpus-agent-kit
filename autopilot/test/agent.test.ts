@@ -48,7 +48,7 @@ describe("runAutopilot", () => {
     };
     const res = await runAutopilot([{ role: "user", content: "ready to file" }], { chat: fakeChat as any });
     expect(lanesUsed).toContain("critical");
-    expect(res.handoffUrl).toMatch(/\/formation\?prefill=/);
+    expect(res.handoffUrl).toMatch(/\/formation#prefill=/);
   });
 
   it("critical-lane failure falls back to the fast lane with a reduced-confidence marker", async () => {
@@ -66,7 +66,7 @@ describe("runAutopilot", () => {
       });
     };
     const res = await runAutopilot([{ role: "user", content: "ready" }], { chat: fakeChat as any });
-    expect(res.handoffUrl).toMatch(/\/formation\?prefill=/);
+    expect(res.handoffUrl).toMatch(/\/formation#prefill=/);
     expect(res.reply).toMatch(/fast lane/);
   });
 
@@ -97,8 +97,8 @@ describe("runAutopilot", () => {
       });
     };
     const res = await runAutopilot([{ role: "user", content: "file in Wyoming" }], { chat: fakeChat as any });
-    expect(res.handoffUrl).toMatch(/\/formation\?prefill=/);
-    const b64 = res.handoffUrl!.split("prefill=")[1];
+    expect(res.handoffUrl).toMatch(/\/formation#prefill=/);
+    const b64 = new URL(res.handoffUrl!).hash.replace(/^#prefill=/, "");
     const prefill = JSON.parse(Buffer.from(b64, "base64url").toString());
     expect(prefill.jurisdiction).toBe("US-WY");
     expect(prefill.proposedName).toBe("Fenced LLC");
@@ -204,7 +204,7 @@ describe("runAutopilot", () => {
         tool_calls: [{ id: "t9", type: "function", function: { name: "finalize_handoff", arguments: JSON.stringify({ entityType: "llc", jurisdiction: "US-MS", contactEmail: email }) } }],
       });
     };
-    const decode = (url: string) => JSON.parse(Buffer.from(url.split("prefill=")[1], "base64url").toString());
+    const decode = (url: string) => JSON.parse(Buffer.from(new URL(url).hash.replace(/^#prefill=/, ""), "base64url").toString());
 
     const fabricated = await runAutopilot([{ role: "user", content: "LLC in Mississippi please" }], { chat: makeChat("founder@example.com") as any });
     expect(decode(fabricated.handoffUrl!).contactEmail).toBeUndefined();

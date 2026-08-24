@@ -1,6 +1,6 @@
 import { corpusBase } from "./law-search.js";
 
-/** The ONLY payload shape that crosses into the hosted /formation prefill. */
+/** The ONLY payload shape that crosses into the hosted /formation#prefill handoff. */
 export interface HandoffDraft {
   v: 1;
   entityType: "llc" | "nonprofit";
@@ -62,5 +62,5 @@ export function buildHandoffUrl(draft: HandoffDraft): string {
     ...(draft.naicsCode ? { llc: { naicsCode: draft.naicsCode } } : {}),
   };
   const b64 = Buffer.from(JSON.stringify(wire)).toString("base64url");
-  return `${corpusBase()}/formation?prefill=${b64}`;
+  return `${corpusBase()}/formation#prefill=${b64}`;
 }

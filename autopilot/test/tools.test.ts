@@ -26,6 +26,13 @@ describe("lookupNaics", () => {
   it("codes a liquor store from the full Census 2022 dataset", () => {
     expect(lookupNaics("liquor store")[0]?.code).toBe("445320");
   });
+  it("pins coffee shops to Snack and Nonalcoholic Beverage Bars", () => {
+    expect(lookupNaics("coffee shop")[0]?.code).toBe("722515");
+  });
+  it("pins software development and SaaS to Custom Computer Programming Services", () => {
+    expect(lookupNaics("software development")[0]?.code).toBe("541511");
+    expect(lookupNaics("saas platform")[0]?.code).toBe("541511");
+  });
 });
 
 describe("searchLaw", () => {
@@ -72,7 +79,9 @@ describe("handoff", () => {
     if (!res.ok) return;
     const url = new URL(buildHandoffUrl(res.draft));
     expect(url.pathname).toBe("/formation");
-    const decoded = JSON.parse(Buffer.from(url.searchParams.get("prefill")!, "base64url").toString());
+    expect(url.search).toBe("");
+    expect(url.hash).toMatch(/^#prefill=/);
+    const decoded = JSON.parse(Buffer.from(url.hash.replace(/^#prefill=/, ""), "base64url").toString());
     expect(decoded.jurisdiction).toBe("US-MS");
     expect(decoded.llc.naicsCode).toBe("311811");
   });

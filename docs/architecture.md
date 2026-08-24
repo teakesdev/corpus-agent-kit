@@ -26,7 +26,7 @@ flowchart LR
   end
   subgraph CLOSED["Hosted Corpus platform (closed)"]
     MCP["/api/mcp"] --> DB[(Aurora<br/>~186K law nodes)]
-    F["/formation?prefill= checkout"] --> G[GATE 2<br/>hash-locked human approval]
+    F["/formation#prefill= checkout"] --> G[GATE 2<br/>hash-locked human approval]
     G --> FILE[Stripe → state filing]
   end
   A <--> Q

@@ -6,10 +6,18 @@ const deps = {
   forward: async (msg) => ({ jsonrpc: "2.0", id: msg.id, result: { tools: [{ name: "search_law" }] } }),
 };
 
-test("initialize answered locally with server info", async () => {
+test("initialize is forwarded to the hosted MCP", async () => {
   const res = await handleMessage({ jsonrpc: "2.0", id: 1, method: "initialize", params: {} }, deps);
-  assert.equal(res.result.serverInfo.name, "corpus-agent-kit");
-  assert.ok(res.result.capabilities.tools);
+  assert.deepEqual(res.result.tools, [{ name: "search_law" }]);
+});
+
+test("initialize failure returns a JSON-RPC error", async () => {
+  const res = await handleMessage(
+    { jsonrpc: "2.0", id: 5, method: "initialize", params: {} },
+    { forward: async () => { throw new Error("host unavailable"); } },
+  );
+  assert.equal(res.error.code, -32000);
+  assert.match(res.error.message, /host unavailable/);
 });
 
 test("notifications get no response", async () => {

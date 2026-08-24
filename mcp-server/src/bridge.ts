@@ -1,26 +1,11 @@
-/** Pure MCP message handler: local handshake, everything tool-shaped forwarded. */
+/** Pure MCP message handler: stdio notifications/ping are local; MCP requests are forwarded. */
 export interface BridgeDeps {
   forward: (msg: object) => Promise<object | null>;
 }
 
-const SERVER_INFO = { name: "corpus-agent-kit", version: "0.1.0" };
-
 export async function handleMessage(msg: any, deps: BridgeDeps): Promise<object | null> {
   if (!msg || typeof msg !== "object") return null;
   if (typeof msg.method === "string" && msg.method.startsWith("notifications/")) return null;
-  if (msg.method === "initialize") {
-    return {
-      jsonrpc: "2.0",
-      id: msg.id ?? null,
-      result: {
-        protocolVersion: msg.params?.protocolVersion ?? "2025-06-18",
-        capabilities: { tools: {} },
-        serverInfo: SERVER_INFO,
-        instructions:
-          "Corpus law search bridge. Tools are served by the hosted Corpus platform; anonymous use is rate-limited — set CORPUS_API_KEY for higher limits.",
-      },
-    };
-  }
   if (msg.method === "ping") return { jsonrpc: "2.0", id: msg.id ?? null, result: {} };
   try {
     return await deps.forward(msg);

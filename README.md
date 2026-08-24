@@ -155,7 +155,10 @@ Replace `/absolute/path/to/corpus-agent-kit` with the actual path to your clone.
 
 > **Note:** The package name `@corpus-agent-kit/mcp-server` is reserved for a future npm publish; until then, build locally and point your MCP client at `mcp-server/dist/index.js`. **HTTP MCP clients:** the hosted endpoint `https://corpuslaw.us/api/mcp` supports the streamable-HTTP MCP transport directly — no local bridge needed.
 
-This exposes three tools: `search_law`, `get_law_node`, `list_coverage`.
+The hosted MCP exposes these seven dotted tools:
+`law.search`, `law.get_node`, `law.list_coverage`, `formation.requirements`,
+`formation.lookup_naics`, `formation.handoff`, and `account.status`.
+The older underscored names are deprecated aliases where still supported.
 
 ### widget — embeddable law-search
 
