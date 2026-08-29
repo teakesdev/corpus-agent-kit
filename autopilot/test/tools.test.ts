@@ -2,7 +2,7 @@ import { describe, it, expect, vi, afterEach } from "vitest";
 import { lookupNaics } from "../src/tools/naics.js";
 import { searchLaw } from "../src/tools/law-search.js";
 import { formatChecklist } from "../src/tools/checklist.js";
-import { buildHandoffUrl, validateDraft } from "../src/tools/handoff.js";
+import { buildHandoffUrl, validateDraft, resolveHandoffUrl } from "../src/tools/handoff.js";
 
 afterEach(() => vi.unstubAllGlobals());
 
@@ -113,5 +113,58 @@ describe("handoff", () => {
     expect(res.ok).toBe(true);
     if (!res.ok) return;
     expect(JSON.stringify(res.draft)).not.toContain("6789");
+  });
+});
+
+describe("resolveHandoffUrl — attribution", () => {
+  const draft = { v: 1, entityType: "llc", jurisdiction: "US-MS", proposedName: "Magnolia Loaf LLC", naicsCode: "311811" } as const;
+  const attributed =
+    "✓ Draft COMPLETE — every required MS intake field is collected.\n\n" +
+    "Formation handoff link (opens fully pre-loaded on corpuslaw.us):\n" +
+    "https://corpuslaw.us/formation#prefill=eyJ2IjoxfQ&src=eyJrIjoiYWJjIn0\n\nCorpus service fee: $96.00";
+  const hosted = (text: string) =>
+    vi.fn(async () => new Response(JSON.stringify({ jsonrpc: "2.0", id: 1, result: { content: [{ type: "text", text }] } })));
+
+  it("routes through the hosted tool when a key is set, and keeps the #src= token", async () => {
+    vi.stubEnv("CORPUS_API_KEY", "ck_test");
+    vi.stubGlobal("fetch", hosted(attributed));
+    const url = await resolveHandoffUrl(draft);
+    expect(url).toContain("#prefill=");
+    expect(url).toContain("&src=");
+    const req = (fetch as any).mock.calls[0][1];
+    expect(req.headers.Authorization).toBe("Bearer ck_test");
+    const body = JSON.parse(req.body);
+    expect(body.params.name).toBe("formation.handoff");
+    // The hosted tool takes a bare state, not the US-XX jurisdiction form.
+    expect(body.params.arguments.state).toBe("MS");
+    expect(body.params.arguments.entityType).toBe("llc");
+  });
+
+  it("stays local (no network) when no key is configured — attribution is impossible without one", async () => {
+    vi.stubEnv("CORPUS_API_KEY", "");
+    const spy = vi.fn();
+    vi.stubGlobal("fetch", spy);
+    const url = await resolveHandoffUrl(draft);
+    expect(spy).not.toHaveBeenCalled();
+    expect(url).toContain("#prefill=");
+    expect(url).not.toContain("&src=");
+  });
+
+  it("falls back to the local link when the hosted call throws — attribution never costs the handoff", async () => {
+    vi.stubEnv("CORPUS_API_KEY", "ck_test");
+    vi.stubGlobal("fetch", vi.fn(async () => { throw new Error("ECONNRESET"); }));
+    expect(await resolveHandoffUrl(draft)).toContain("#prefill=");
+  });
+
+  it("falls back when the hosted tool returns a JSON-RPC error", async () => {
+    vi.stubEnv("CORPUS_API_KEY", "ck_test");
+    vi.stubGlobal("fetch", vi.fn(async () => new Response(JSON.stringify({ jsonrpc: "2.0", id: 1, error: { code: -32000, message: "rate limited" } }))));
+    expect(await resolveHandoffUrl(draft)).toContain("#prefill=");
+  });
+
+  it("falls back when the hosted response carries no link (e.g. an unsupported combo refusal)", async () => {
+    vi.stubEnv("CORPUS_API_KEY", "ck_test");
+    vi.stubGlobal("fetch", hosted("Error: Nonprofit formation is not available in US-NH."));
+    expect(await resolveHandoffUrl(draft)).toBe(buildHandoffUrl(draft as any));
   });
 });

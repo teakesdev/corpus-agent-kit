@@ -32,6 +32,11 @@ resources:
         QWEN_MODEL_FAST: ${env(QWEN_MODEL_FAST)}
         QWEN_MODEL_CRITICAL: ${env(QWEN_MODEL_CRITICAL)}
         CORPUS_BASE_URL: ${env(CORPUS_BASE_URL)}
+        # Without a key the demo shares FC's egress IP against the
+        # ANONYMOUS quota (100 searches/month per IP) and law search
+        # degrades silently to "citations pending". It is also what
+        # makes handoffs attributable — see tools/handoff.ts.
+        CORPUS_API_KEY: ${env(CORPUS_API_KEY)}
         SPEND_CAP_TURNS_PER_HOUR: "120"
       code: ../..
       triggers:

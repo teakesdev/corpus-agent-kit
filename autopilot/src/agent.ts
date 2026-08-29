@@ -3,7 +3,7 @@ import { chat as realChat } from "./qwen.js";
 import { searchLaw } from "./tools/law-search.js";
 import { lookupNaics } from "./tools/naics.js";
 import { formatChecklist, type ChecklistItem } from "./tools/checklist.js";
-import { buildHandoffUrl, validateDraft } from "./tools/handoff.js";
+import { resolveHandoffUrl, validateDraft } from "./tools/handoff.js";
 
 export interface AutopilotResult {
   reply: string;
@@ -238,7 +238,7 @@ export async function runAutopilot(
           ) {
             delete validated.draft.contactEmail;
           }
-          handoffUrl = buildHandoffUrl(validated.draft);
+          handoffUrl = await resolveHandoffUrl(validated.draft);
           result =
             `Handoff ready: ${handoffUrl}\n` +
             (reducedConfidence ? "(Note: the draft review ran on the fast lane — double-check the summary with the founder.)\n" : "") +

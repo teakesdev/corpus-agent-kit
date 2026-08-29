@@ -64,3 +64,75 @@ export function buildHandoffUrl(draft: HandoffDraft): string {
   const b64 = Buffer.from(JSON.stringify(wire)).toString("base64url");
   return `${corpusBase()}/formation#prefill=${b64}`;
 }
+
+// ---------------------------------------------------------------------------
+// Attribution
+// ---------------------------------------------------------------------------
+
+/**
+ * The hosted `formation.handoff` tool is THE ONLY PLACE that can record which
+ * agent sent a founder: it stamps `formation_order.source_api_key_id` from an
+ * opaque `#src=` token minted against the calling API key. The key *id* is a
+ * server-side UUID that no client is told — `account.status` returns the key's
+ * NAME — so a locally built link is structurally unattributable, and there is
+ * no server-side trace to reconstruct the channel from afterwards.
+ *
+ * Hence this: build the link on the hosted side when we hold a key, so orders
+ * arriving from this agent are distinguishable from organic ones. Routing
+ * through the hosted tool also picks up server-side draft validation and the
+ * supported-combo check (e.g. nonprofit formation is unavailable in NH/NY),
+ * which the local whitelist cannot know about.
+ *
+ * ATTRIBUTION NEVER COSTS THE HANDOFF. Every failure — no key, network error,
+ * JSON-RPC error, timeout, a response carrying no link — falls back to the
+ * local link, which is exactly what this agent produced before attribution
+ * existed. A founder must never lose their draft because we wanted a metric.
+ */
+const HOSTED_HANDOFF_TIMEOUT_MS = 8000;
+
+let handoffRpcId = 0;
+
+/** Pull the handoff link out of the hosted tool's prose response. */
+export function extractHandoffUrl(text: string): string | null {
+  return text.match(/https?:\/\/\S*?\/formation#prefill=[A-Za-z0-9_\-=&]+/)?.[0] ?? null;
+}
+
+export async function resolveHandoffUrl(draft: HandoffDraft): Promise<string> {
+  const local = buildHandoffUrl(draft);
+  const apiKey = process.env.CORPUS_API_KEY;
+  // No key → nothing to attribute to. Skip the round trip entirely.
+  if (!apiKey) return local;
+  try {
+    const res = await fetch(`${corpusBase()}/api/mcp`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
+      signal: AbortSignal.timeout(HOSTED_HANDOFF_TIMEOUT_MS),
+      body: JSON.stringify({
+        jsonrpc: "2.0",
+        id: ++handoffRpcId,
+        method: "tools/call",
+        params: {
+          name: "formation.handoff",
+          arguments: {
+            entityType: draft.entityType,
+            // The hosted tool takes a bare state ("MS"); we carry US-XX.
+            state: draft.jurisdiction.replace(/^US-/, ""),
+            ...(draft.proposedName ? { proposedName: draft.proposedName } : {}),
+            ...(draft.contactEmail ? { contactEmail: draft.contactEmail } : {}),
+            ...(draft.naicsCode ? { naicsCode: draft.naicsCode } : {}),
+          },
+        },
+      }),
+    });
+    if (!res.ok) return local;
+    const json: any = await res.json();
+    if (json.error) return local;
+    const text: string = (json.result?.content ?? [])
+      .filter((c: any) => c.type === "text")
+      .map((c: any) => c.text)
+      .join("\n");
+    return extractHandoffUrl(text) ?? local;
+  } catch {
+    return local;
+  }
+}
