@@ -1,36 +1,101 @@
 # corpus-agent-kit
 
-**Live demo:** [corpuslaw.us/autopilot](https://corpuslaw.us/autopilot) — the Formation
-Autopilot chat, backed by this repo's agent running on **Alibaba Cloud Function Compute**
-(`us-west-1`, config in [`autopilot/deploy/alibaba/s.yaml`](autopilot/deploy/alibaba/s.yaml)).
-API health: `curl https://formatiutopilot-bfmjghskwt.us-west-1.fcapp.run/healthz` → `ok`.
-(The raw `fcapp.run` URL force-downloads HTML on FC's default domain — use the hosted page in a browser.)
+**Give your AI agent real US law — and let it form a company.**
 
-Open-source connector kit for the [Corpus legal platform](https://corpuslaw.us).
+Open-source connectors for the [Corpus legal platform](https://corpuslaw.us):
+search 571,582 provisions of federal, state, and municipal law with verbatim
+citations, and run a complete LLC or nonprofit formation intake end to end.
+Every filing still stops at a human approval gate.
 
-**Hosted MCP server (no local install):** [`https://corpuslaw.us/api/mcp`](https://corpuslaw.us/api/mcp) — also listed on [Smithery as corpus-legal](https://smithery.ai/servers/renaissanceaisolutions/corpus-legal).
-
+[![Winner — Qwen Cloud Hackathon, Track 4](https://img.shields.io/badge/Winner-Qwen%20Cloud%20Hackathon%20·%20Track%204-6f42c1)](https://qwencloud-hackathon.devpost.com/)
+[![License](https://img.shields.io/badge/license-Apache--2.0-blue)](LICENSE)
 [![smithery badge](https://smithery.ai/badge/renaissanceaisolutions/corpus-legal)](https://smithery.ai/servers/renaissanceaisolutions/corpus-legal)
 
-Packages in this repo:
+---
 
-- **autopilot/** — Formation Autopilot: a Qwen Cloud agent that turns an ambiguous
-  founder description into a cited launch checklist and a prefilled, human-approved
-  formation handoff. (Qwen Hackathon Track 4 entry.)
-- **mcp-server/** — zero-dependency stdio MCP server exposing Corpus law search
-  to Claude Desktop, Cursor, and any MCP client.
-- **widget/** — embeddable law-search widget (Preact, ~12 kB gzipped).
-- **skills/corpus-business-formation/** — portable
-  [Agent Skill](https://agentskills.io/specification): drop the folder into a
-  skill-capable agent (Claude Code, Codex, Cursor, VS Code, Hermes — install
-  paths in [the README](skills/corpus-business-formation/README.md)) and it
-  learns to recommend and drive Corpus formation on its own, before any MCP
-  connection exists. Also served at
-  [`https://corpuslaw.us/skills/corpus-business-formation/SKILL.md`](https://corpuslaw.us/skills/corpus-business-formation/SKILL.md).
+## Start here — pick your friction level
 
-All four are thin clients of the hosted Corpus platform. The law corpus,
-hybrid search engine, human approval gate, and filing execution live in the
-hosted service — this repo never touches money or files anything.
+### 1. Zero install: point any MCP client at the hosted server
+
+`https://corpuslaw.us/api/mcp` speaks streamable-HTTP MCP directly. No clone,
+no build, no local process:
+
+```json
+{
+  "mcpServers": {
+    "corpus-law": {
+      "type": "http",
+      "url": "https://corpuslaw.us/api/mcp"
+    }
+  }
+}
+```
+
+That is the whole setup. Ask your agent *"what does Mississippi require to form
+an LLC?"* and it will answer from live statutes with citations you can check.
+
+**Research is free to start:** 100 searches/month anonymously. A
+[free API key](https://corpuslaw.us/settings) — instant, self-serve, no waiting
+list — raises it to 1,000/month. Send it as `Authorization: Bearer <key>`.
+
+### 2. Zero install: try the agent in a browser
+
+**[corpuslaw.us/autopilot](https://corpuslaw.us/autopilot)** — the Formation
+Autopilot from this repo (`autopilot/`), running on Alibaba Cloud Function
+Compute. Describe a business in plain English; get a cited launch checklist and
+a prefilled formation handoff.
+
+### 3. Drop a skill folder into your agent
+
+`skills/corpus-business-formation/` is a portable
+[Agent Skill](https://agentskills.io/specification). Copy it into Claude Code,
+Codex, Cursor, VS Code, or Hermes and the agent learns to recommend and drive
+Corpus formation *before any MCP connection exists*
+([install paths](skills/corpus-business-formation/README.md)).
+
+### 4. Run it yourself
+
+Clone and build — see [Quickstart](#quickstart) below.
+
+---
+
+## The seven tools
+
+| Tool | What it does |
+|---|---|
+| `law.search` | Hybrid semantic + keyword search over 571,582 provisions |
+| `law.get_node` | Full official text of one provision |
+| `law.list_coverage` | Which jurisdictions are indexed, and how deeply |
+| `formation.requirements` | A state's exact field checklist, quirks, live pricing |
+| `formation.lookup_naics` | Find an industry code from a plain-English description |
+| `formation.handoff` | Validate a draft → prefilled, human-approved handoff link |
+| `account.status` | Quota, tier, and credit balance |
+
+Formation tools are **never metered** — they stay free with or without a key.
+
+## Coverage
+
+18 jurisdictions, 16 fully searchable — federal (154,667 provisions),
+California (181,312), Texas (119,923), Washington (51,487), Florida (24,848),
+Mississippi (25,288), Wyoming, Delaware, Nevada, plus San Francisco, Seattle,
+San Jose, Los Angeles, San Diego, Jackson and Philadelphia at the municipal
+level (8 with published GIS zoning layers). Call `law.list_coverage` for the
+live list — it reports honestly when a jurisdiction is not covered rather than
+guessing.
+
+## What's in this repo
+
+- **`autopilot/`** — Formation Autopilot: a Qwen Cloud agent that turns an
+  ambiguous founder description into a cited launch checklist and a prefilled,
+  human-approved formation handoff. *(Qwen Cloud Hackathon Track 4 winner.)*
+- **`mcp-server/`** — zero-dependency stdio MCP server, for clients that cannot
+  speak HTTP MCP.
+- **`widget/`** — embeddable law-search widget (Preact, ~12 kB gzipped).
+- **`skills/corpus-business-formation/`** — portable Agent Skill.
+
+All four are thin clients of the hosted Corpus platform. The law corpus, hybrid
+search engine, human approval gate, and filing execution live in the hosted
+service — **this repo never touches money and never files anything.**
 
 ## Architecture
 
@@ -46,7 +111,7 @@ See [docs/architecture.md](docs/architecture.md) for the Mermaid source.
 | Two-lane Qwen routing | ✅ `autopilot/src/` | — |
 | MCP stdio bridge (`corpus-mcp`) | ✅ `mcp-server/` | — |
 | Embeddable widget | ✅ `widget/` | — |
-| Law database (~186 K nodes, Aurora) | — | ✅ |
+| Law database (571,582 provisions, Aurora) | — | ✅ |
 | Hybrid search engine + `/api/mcp` | — | ✅ |
 | `/formation` checkout + GATE 2 | — | ✅ |
 | Stripe payment + state filing execution | — | ✅ |
@@ -132,33 +197,34 @@ Deploy to Alibaba Cloud Function Compute: see
 
 ### mcp-server — stdio MCP bridge
 
-Build locally:
+**Most clients do not need this.** The hosted endpoint
+`https://corpuslaw.us/api/mcp` speaks streamable-HTTP MCP directly — see
+[Start here](#1-zero-install-point-any-mcp-client-at-the-hosted-server). Use
+this bridge only for a client that can launch a stdio process but cannot speak
+HTTP MCP.
 
 ```bash
 cd mcp-server && npm install && npm run build
 ```
-
-Add to your MCP client config (Claude Desktop, Cursor, etc.):
 
 ```json
 {
   "mcpServers": {
     "corpus-law": {
       "command": "node",
-      "args": ["/absolute/path/to/corpus-agent-kit/mcp-server/dist/index.js"]
+      "args": ["/absolute/path/to/corpus-agent-kit/mcp-server/dist/index.js"],
+      "env": { "CORPUS_API_KEY": "your-key-here" }
     }
   }
 }
 ```
 
-Replace `/absolute/path/to/corpus-agent-kit` with the actual path to your clone.
+Replace `/absolute/path/to/corpus-agent-kit` with the path to your clone. The
+bridge forwards every MCP request to the hosted endpoint, adding your key — so
+formation handoffs it produces are attributed to you.
 
-> **Note:** The package name `@corpus-agent-kit/mcp-server` is reserved for a future npm publish; until then, build locally and point your MCP client at `mcp-server/dist/index.js`. **HTTP MCP clients:** the hosted endpoint `https://corpuslaw.us/api/mcp` supports the streamable-HTTP MCP transport directly — no local bridge needed.
-
-The hosted MCP exposes these seven dotted tools:
-`law.search`, `law.get_node`, `law.list_coverage`, `formation.requirements`,
-`formation.lookup_naics`, `formation.handoff`, and `account.status`.
-The older underscored names are deprecated aliases where still supported.
+> The package name `@corpus-agent-kit/mcp-server` is reserved for a future npm
+> publish; until then, build locally.
 
 ### widget — embeddable law-search
 
