@@ -1,6 +1,22 @@
 node_modules/
 dist/
+
+# --- secrets: broad by design ---------------------------------------------
+# A NARROW list is how a real key gets committed. `.env` alone does not catch
+# `.env.bak`, `.env.bak.20260627053037`, `.env.production` or `secrets.env` —
+# and timestamped .env backups are an established habit on this project's
+# server, so the same habit on a laptop would publish a live key to a PUBLIC
+# repo that already has forks. Match everything, then re-admit the template.
 .env
+.env.*
+!.env.example
+*.bak
+*.backup
+*.orig
+secrets.env
+*.pem
+*.key
+credentials.json
 *.log
 .DS_Store
 autopilot/package-lock.json
