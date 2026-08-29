@@ -1,3 +1,5 @@
+<img src="AgentkitLogo.png" alt="Corpus Agent Kit — give your AI agent real U.S. law" width="100%">
+
 # corpus-agent-kit
 
 **Give your AI agent real US law — and let it form a company.**
