@@ -11,7 +11,7 @@ is the machine-readable equivalent.
 ```mermaid
 flowchart LR
   subgraph OPEN["corpus-agent-kit (Apache-2.0, this repo)"]
-    UI[Chat UI] --> A[Formation Autopilot<br/>qwen-flash default lane<br/>qwen3.7 critical lane]
+    UI[Chat UI] --> A[Formation Autopilot<br/>qwen-flash-2025-07-28 default lane<br/>qwen3.7 critical lane]
     A -->|search_law| MCPC[law_search tool]
     A --> N[NAICS lookup]
     A --> H[handoff builder]

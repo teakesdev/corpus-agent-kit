@@ -122,7 +122,7 @@ See [docs/architecture.md](docs/architecture.md) for the Mermaid source.
 
 The autopilot uses two Qwen models with different cost/quality profiles:
 
-- **Fast lane** (`QWEN_MODEL_FAST`, default `qwen-flash`): all standard turns —
+- **Fast lane** (`QWEN_MODEL_FAST`, default `qwen-flash-2025-07-28`): all standard turns —
   intent parsing, law search, checklist generation. Low latency, low spend.
 - **Critical lane** (`QWEN_MODEL_CRITICAL`, default `qwen3.7-max`): the final
   pre-handoff draft review only. Higher quality for the one turn that shapes the
@@ -171,7 +171,7 @@ cp .env.example .env
 |---|---|---|
 | `QWEN_API_KEY` | _(required)_ | Qwen Cloud API key |
 | `QWEN_BASE_URL` | _(required)_ | Qwen OpenAI-compatible base URL (e.g. `https://dashscope-intl.aliyuncs.com/compatible-mode/v1`) |
-| `QWEN_MODEL_FAST` | `qwen-flash` | Fast-lane model — standard turns |
+| `QWEN_MODEL_FAST` | `qwen-flash-2025-07-28` | Fast-lane model — standard turns |
 | `QWEN_MODEL_CRITICAL` | `qwen3.7-max` | Critical-lane model — pre-handoff review |
 | `CORPUS_BASE_URL` | `https://corpuslaw.us` | Hosted Corpus platform base URL |
 | `CORPUS_API_KEY` | _(optional)_ | Corpus platform API key (optional — anonymous is rate-limited) |
