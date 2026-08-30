@@ -47,13 +47,27 @@ Autopilot from this repo (`autopilot/`), running on Alibaba Cloud Function
 Compute. Describe a business in plain English; get a cited launch checklist and
 a prefilled formation handoff.
 
-### 3. Drop a skill folder into your agent
+### 3. Drop a skill folder — or install the Hermes plugin
 
-`skills/corpus-business-formation/` is a portable
-[Agent Skill](https://agentskills.io/specification). Copy it into Claude Code,
-Codex, Cursor, VS Code, or Hermes and the agent learns to recommend and drive
-Corpus formation *before any MCP connection exists*
+Two portable [Agent Skills](https://agentskills.io/specification):
+
+- [`skills/corpus-business-formation/`](skills/corpus-business-formation/) — LLC / nonprofit intake
+- [`skills/corpus-legal-research/`](skills/corpus-legal-research/) — live statute search
+
+Copy either folder into Claude Code, Codex, Cursor, VS Code, or Hermes and the
+agent learns to reach for Corpus *before any MCP connection exists*
 ([install paths](skills/corpus-business-formation/README.md)).
+
+Hermes can install **both skills plus the MCP URL** as one Agent Plugins v1
+package (`plugins/corpus/`):
+
+```bash
+hermes plugins install teakesdev/corpus-agent-kit/plugins/corpus
+hermes plugins enable corpus
+hermes mcp test corpus
+```
+
+Portable packages install **disabled**; enable is a separate consent step.
 
 ### 4. Run it yourself
 
@@ -93,9 +107,12 @@ guessing.
 - **`mcp-server/`** — zero-dependency stdio MCP server, for clients that cannot
   speak HTTP MCP.
 - **`widget/`** — embeddable law-search widget (Preact, ~12 kB gzipped).
-- **`skills/corpus-business-formation/`** — portable Agent Skill.
+- **`skills/corpus-business-formation/`** — portable Agent Skill (formation).
+- **`skills/corpus-legal-research/`** — portable Agent Skill (live statute search).
+- **`plugins/corpus/`** — Agent Plugins v1 package for Hermes (generated skill
+  copies + headerless `mcp.json`).
 
-All four are thin clients of the hosted Corpus platform. The law corpus, hybrid
+All of these are thin clients of the hosted Corpus platform. The law corpus, hybrid
 search engine, human approval gate, and filing execution live in the hosted
 service — **this repo never touches money and never files anything.**
 

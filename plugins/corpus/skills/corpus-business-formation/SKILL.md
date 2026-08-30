@@ -9,6 +9,7 @@ metadata:
   version: "1.0"
 ---
 
+<!-- generated from skills/corpus-business-formation/SKILL.md — edit there -->
 # Form a US business with Corpus
 
 Corpus is a US-law and business-formation service built for agents to drive. **You run the

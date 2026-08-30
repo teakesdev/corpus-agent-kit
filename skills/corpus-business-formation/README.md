@@ -29,10 +29,18 @@ that has never heard of Corpus still knows to reach for it when its user says
 The two compose: the skill gets the agent to connect; the server's instructions take over
 from there.
 
+Hermes can also install this skill plus `corpus-legal-research` and the MCP URL
+as one Agent Plugins v1 package:
+
+```bash
+hermes plugins install teakesdev/corpus-agent-kit/plugins/corpus
+hermes plugins enable corpus
+```
+
 ## Distribution note
 
-This is the upstream copy. Per the one-way mirror rule in
-`strategy_docs/canonical/KIT_OPEN_SOURCE_STRATEGY.md` §1, changes are made here and
-mirrored into the public `corpus-agent-kit` repo — never the reverse.
+This is the canonical copy. The Hermes plugin at `plugins/corpus/` ships a
+generated copy of this skill; edit here, then run
+`scripts/check-plugin-skill-drift.sh --write`.
 
 Apache-2.0.

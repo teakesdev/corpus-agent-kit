@@ -12,19 +12,28 @@ accept changes here:
 |---|---|
 | `autopilot/`, `mcp-server/`, `widget/` | Open to contributions |
 | `autopilot/src/tools/naics-data.ts` | Mirrored from upstream — file an issue instead |
-| `skills/corpus-business-formation/` | Mirrored from upstream — file an issue instead |
+| `skills/corpus-business-formation/`, `skills/corpus-legal-research/` | Canonical skills — edit here |
+| `plugins/corpus/skills/` | Generated copies — never edit; run `scripts/check-plugin-skill-drift.sh --write` |
 
 ## Development
 
 ```bash
 npm install
 npm run build                       # all workspaces
+npm run check:plugin-skill-drift    # generated plugin skills vs canonical
 cd autopilot && npx vitest run      # 39 tests
 cd mcp-server && npm test           # 6 tests
 ```
 
-Requires Node >= 20. Both suites must be green, and `npx tsc --noEmit` clean,
-before a PR is reviewed.
+Requires Node >= 20. Both suites must be green, `npx tsc --noEmit` clean,
+and the plugin-skill drift check passing, before a PR is reviewed.
+
+`npm test` at the repo root runs the drift check first, then the workspace
+suites. After editing a canonical skill, regenerate the plugin copies:
+
+```bash
+scripts/check-plugin-skill-drift.sh --write
+```
 
 ## Ground rules
 

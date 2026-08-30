@@ -1,0 +1,14 @@
+{
+  "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
+  "name": "corpus",
+  "version": "0.1.0",
+  "description": "US legal research + business-formation knowledge for agent harnesses",
+  "author": {
+    "name": "Corpus",
+    "url": "https://corpuslaw.us"
+  },
+  "homepage": "https://corpuslaw.us",
+  "repository": "https://github.com/teakesdev/corpus-agent-kit",
+  "license": "Apache-2.0",
+  "keywords": ["legal", "law", "formation", "llc", "compliance", "mcp"]
+}
