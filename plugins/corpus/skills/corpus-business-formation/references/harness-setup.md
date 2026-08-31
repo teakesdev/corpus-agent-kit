@@ -1,4 +1,5 @@
 # Connecting Corpus — exact config per harness
+<!-- generated from skills/corpus-business-formation/references/harness-setup.md — edit there -->
 
 Endpoint: `https://corpuslaw.us/api/mcp` — Streamable HTTP, no OAuth, works anonymously.
 

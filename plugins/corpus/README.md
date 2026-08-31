@@ -8,8 +8,9 @@ wrapper** is Agent Plugins v1 (`plugin.json` + `mcp.json` in this directory).
 That layout installs directly in Hermes today. Codex/ChatGPT use a different
 folder shape; they reuse the same URL.
 
-Manifest `name` is `corpus`. Skills in `skills/` are **generated copies** of the
-canonical files at the repo root — edit `skills/corpus-legal-research/` and
+Manifest `name` is `corpus`. Files under `skills/` are **generated copies** of
+the canonical skill trees at the repo root (`SKILL.md` plus any
+`references/`) — edit `skills/corpus-legal-research/` and
 `skills/corpus-business-formation/` there, then run
 `scripts/check-plugin-skill-drift.sh --write`.
 
@@ -34,11 +35,12 @@ hermes mcp test corpus
 Portable packages install **disabled**. Enable is a separate consent step.
 
 No secrets belong in `mcp.json`. Anonymous research works without a key.
-For higher limits, add a header via `hermes mcp add` (not this file):
+For higher limits, add a header via `hermes mcp add --auth header` (not this
+file). Get a free self-serve key at https://corpuslaw.us/settings, then paste
+it when Hermes prompts for the API key / Bearer token:
 
 ```bash
-# free self-serve key — https://corpuslaw.us/settings
-hermes mcp add corpus --url "https://corpuslaw.us/api/mcp"
+hermes mcp add corpus --url "https://corpuslaw.us/api/mcp" --auth header
 ```
 
 Hosted server: `https://corpuslaw.us/api/mcp` (Streamable HTTP).

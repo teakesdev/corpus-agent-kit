@@ -2,7 +2,12 @@
 # Regenerate plugins/corpus/skills from the canonical skill roots and fail on
 # drift. Generated SKILL.md files are the canonical bytes plus a stamp line
 # immediately after the closing frontmatter fence (Agent Plugins v1 requires
-# `---` at byte 0, so the stamp must never be first).
+# `---` at byte 0, so the stamp must never be first). Other packaged files
+# (skill `references/`) get the same stamp after the first line.
+#
+# Packaged per skill: SKILL.md and anything under references/. Skill READMEs
+# stay at the canonical roots (they describe copying a skill folder, not the
+# plugin package).
 #
 # Usage:
 #   scripts/check-plugin-skill-drift.sh          # compare, exit 1 on drift
@@ -39,36 +44,37 @@ names = sys.argv[3:]
 plugin_skills = root / "plugins" / "corpus" / "skills"
 frontmatter_close = re.compile(r"\n---\s*\n")
 stamp_line = re.compile(
-    r"^<!-- generated from (?P<rel>skills/[^ ]+/SKILL\.md) — edit there -->\n",
+    r"^<!-- generated from (?P<rel>skills/.+?) — edit there -->\n",
     re.M,
 )
 
 
-def stamp_skill(text: str, rel: str) -> str:
+def stamp_text(text: str, rel: str) -> str:
     if text.startswith("\ufeff"):
         text = text[1:]
-    if not text.startswith("---"):
-        raise SystemExit(f"{rel}: missing YAML frontmatter")
-    match = frontmatter_close.search(text[3:])
-    if match is None:
-        raise SystemExit(f"{rel}: unterminated YAML frontmatter")
-    insert_at = match.end() + 3
     stamp = f"<!-- generated from {rel} — edit there -->\n"
-    return text[:insert_at] + stamp + text[insert_at:]
+    if text.startswith("---"):
+        match = frontmatter_close.search(text[3:])
+        if match is None:
+            raise SystemExit(f"{rel}: unterminated YAML frontmatter")
+        insert_at = match.end() + 3
+        generated = text[:insert_at] + stamp + text[insert_at:]
+        if not generated.startswith("---"):
+            raise SystemExit(f"{rel}: stamp must not precede frontmatter")
+        return generated
+    nl = text.find("\n")
+    if nl < 0:
+        return text + "\n" + stamp
+    return text[: nl + 1] + stamp + text[nl + 1 :]
 
 
 def strip_stamp(text: str) -> tuple[str, str | None]:
     if text.startswith("\ufeff"):
         text = text[1:]
-    match = frontmatter_close.search(text[3:])
-    if match is None:
-        return text, None
-    rest_at = match.end() + 3
-    rest = text[rest_at:]
-    stamped = stamp_line.match(rest)
+    stamped = stamp_line.search(text)
     if stamped is None:
         return text, None
-    return text[:rest_at] + rest[stamped.end() :], stamped.group("rel")
+    return text[: stamped.start()] + text[stamped.end() :], stamped.group("rel")
 
 
 def sha256(data: str) -> str:
@@ -83,6 +89,30 @@ def frontmatter_description(text: str) -> str:
     if value.startswith('"') and value.endswith('"'):
         value = value[1:-1]
     return value
+
+
+def packaged_rel_paths(name: str) -> list[Path]:
+    src_root = root / "skills" / name
+    files: list[Path] = []
+    skill_md = src_root / "SKILL.md"
+    if skill_md.is_file():
+        files.append(Path("SKILL.md"))
+    refs = src_root / "references"
+    if refs.is_dir():
+        for path in sorted(refs.rglob("*")):
+            if path.is_file() and path.name != ".DS_Store":
+                files.append(path.relative_to(src_root))
+    return files
+
+
+def iter_plugin_rel_paths(skill_dir: Path) -> list[Path]:
+    if not skill_dir.is_dir():
+        return []
+    files: list[Path] = []
+    for path in sorted(skill_dir.rglob("*")):
+        if path.is_file() and path.name != ".DS_Store":
+            files.append(path.relative_to(skill_dir))
+    return files
 
 
 def check_doctrine() -> list[str]:
@@ -109,6 +139,10 @@ def check_doctrine() -> list[str]:
         errors.append("formation skill missing never-SSN / never-file")
     if "Social Security" not in research or "never files" not in research:
         errors.append("research skill missing never-SSN / never-file")
+    if "references/harness-setup.md" in formation:
+        ref = root / "skills/corpus-business-formation/references/harness-setup.md"
+        if not ref.is_file():
+            errors.append("formation skill points at references/harness-setup.md but it is missing")
     return errors
 
 
@@ -122,35 +156,41 @@ if doctrine_errors:
 tmp = Path(tempfile.mkdtemp(prefix="corpus-plugin-skills-"))
 try:
     expected_hashes: dict[str, str] = {}
+    packaged: dict[str, list[Path]] = {}
     for name in names:
-        rel = f"skills/{name}/SKILL.md"
-        src = root / rel
-        if not src.is_file():
-            raise SystemExit(f"missing canonical skill: {rel}")
-        canonical = src.read_text(encoding="utf-8")
-        generated = stamp_skill(canonical, rel)
-        if not generated.startswith("---"):
-            raise SystemExit(f"{rel}: stamp must not precede frontmatter")
-        stripped, stamp_rel = strip_stamp(generated)
-        if stamp_rel != rel:
-            raise SystemExit(f"{rel}: stamp path mismatch ({stamp_rel!r})")
-        if stripped != canonical.lstrip("\ufeff"):
-            raise SystemExit(f"{rel}: stamped copy is not reversible to canonical")
-        dest_dir = tmp / name
-        dest_dir.mkdir(parents=True)
-        dest = dest_dir / "SKILL.md"
-        dest.write_text(generated, encoding="utf-8")
-        expected_hashes[rel] = sha256(canonical.lstrip("\ufeff"))
+        rels = packaged_rel_paths(name)
+        if Path("SKILL.md") not in rels:
+            raise SystemExit(f"missing canonical skill: skills/{name}/SKILL.md")
+        packaged[name] = rels
+        dest_root = tmp / name
+        dest_root.mkdir(parents=True)
+        for rel_path in rels:
+            canon_rel = f"skills/{name}/{rel_path.as_posix()}"
+            src = root / canon_rel
+            canonical = src.read_text(encoding="utf-8")
+            generated = stamp_text(canonical, canon_rel)
+            stripped, stamp_rel = strip_stamp(generated)
+            if stamp_rel != canon_rel:
+                raise SystemExit(f"{canon_rel}: stamp path mismatch ({stamp_rel!r})")
+            if stripped != canonical.lstrip("\ufeff"):
+                raise SystemExit(f"{canon_rel}: stamped copy is not reversible to canonical")
+            dest = dest_root / rel_path
+            dest.parent.mkdir(parents=True, exist_ok=True)
+            dest.write_text(generated, encoding="utf-8")
+            expected_hashes[canon_rel] = sha256(canonical.lstrip("\ufeff"))
 
     if write:
         if plugin_skills.exists():
             shutil.rmtree(plugin_skills)
         plugin_skills.mkdir(parents=True)
+        copied = 0
         for name in names:
-            dest_dir = plugin_skills / name
-            dest_dir.mkdir(parents=True)
-            shutil.copy2(tmp / name / "SKILL.md", dest_dir / "SKILL.md")
-        print(f"wrote {len(names)} generated skill copies under {plugin_skills}")
+            for rel_path in packaged[name]:
+                dest = plugin_skills / name / rel_path
+                dest.parent.mkdir(parents=True, exist_ok=True)
+                shutil.copy2(tmp / name / rel_path, dest)
+                copied += 1
+        print(f"wrote {copied} generated skill files under {plugin_skills}")
         raise SystemExit(0)
 
     if not plugin_skills.is_dir():
@@ -161,49 +201,52 @@ try:
     errors: list[str] = []
     expected_names = set(names)
     actual_names = {p.name for p in plugin_skills.iterdir() if p.is_dir()}
-    extra = sorted(actual_names - expected_names)
-    missing = sorted(expected_names - actual_names)
-    if extra:
-        errors.append("unexpected plugin skill dirs: " + ", ".join(extra))
-    if missing:
-        errors.append("missing plugin skill dirs: " + ", ".join(missing))
+    extra_dirs = sorted(actual_names - expected_names)
+    missing_dirs = sorted(expected_names - actual_names)
+    if extra_dirs:
+        errors.append("unexpected plugin skill dirs: " + ", ".join(extra_dirs))
+    if missing_dirs:
+        errors.append("missing plugin skill dirs: " + ", ".join(missing_dirs))
 
     for name in names:
-        rel = f"skills/{name}/SKILL.md"
-        generated_path = plugin_skills / name / "SKILL.md"
-        expected_path = tmp / name / "SKILL.md"
-        if not generated_path.is_file():
-            errors.append(f"missing generated copy: plugins/corpus/skills/{name}/SKILL.md")
-            continue
-        actual = generated_path.read_text(encoding="utf-8")
-        expected = expected_path.read_text(encoding="utf-8")
-        if actual != expected:
+        expected_rels = {p.as_posix() for p in packaged[name]}
+        actual_rels = {p.as_posix() for p in iter_plugin_rel_paths(plugin_skills / name)}
+        extra = sorted(actual_rels - expected_rels)
+        missing = sorted(expected_rels - actual_rels)
+        if extra:
             errors.append(
-                f"drift in plugins/corpus/skills/{name}/SKILL.md "
-                "(edit the canonical skill, then --write)"
+                f"plugins/corpus/skills/{name}/ has extra files: " + ", ".join(extra)
             )
-        stripped, stamp_rel = strip_stamp(actual)
-        canonical = (root / rel).read_text(encoding="utf-8").lstrip("\ufeff")
-        if stamp_rel != rel:
+        if missing:
             errors.append(
-                f"plugins/corpus/skills/{name}/SKILL.md is missing or has the wrong stamp"
+                f"plugins/corpus/skills/{name}/ missing generated files: "
+                + ", ".join(missing)
             )
-        if stripped != canonical:
-            errors.append(
-                f"plugins/corpus/skills/{name}/SKILL.md is not byte-identical to {rel} after stripping the stamp"
-            )
-        elif sha256(stripped) != expected_hashes[rel]:
-            errors.append(f"hash mismatch vs canonical {rel}")
-
-        extras = [
-            p.name
-            for p in (plugin_skills / name).iterdir()
-            if p.name not in {".", "..", "SKILL.md"}
-        ]
-        if extras:
-            errors.append(
-                f"plugins/corpus/skills/{name}/ has extra files: " + ", ".join(sorted(extras))
-            )
+        for rel_path in packaged[name]:
+            canon_rel = f"skills/{name}/{rel_path.as_posix()}"
+            generated_path = plugin_skills / name / rel_path
+            expected_path = tmp / name / rel_path
+            if not generated_path.is_file():
+                continue
+            actual = generated_path.read_text(encoding="utf-8")
+            expected = expected_path.read_text(encoding="utf-8")
+            if actual != expected:
+                errors.append(
+                    f"drift in plugins/corpus/skills/{name}/{rel_path.as_posix()} "
+                    "(edit the canonical file, then --write)"
+                )
+            stripped, stamp_rel = strip_stamp(actual)
+            canonical = (root / canon_rel).read_text(encoding="utf-8").lstrip("\ufeff")
+            if stamp_rel != canon_rel:
+                errors.append(
+                    f"plugins/corpus/skills/{name}/{rel_path.as_posix()} is missing or has the wrong stamp"
+                )
+            if stripped != canonical:
+                errors.append(
+                    f"plugins/corpus/skills/{name}/{rel_path.as_posix()} is not byte-identical to {canon_rel} after stripping the stamp"
+                )
+            elif sha256(stripped) != expected_hashes[canon_rel]:
+                errors.append(f"hash mismatch vs canonical {canon_rel}")
 
     if errors:
         sys.stderr.write("plugin skill drift:\n")
@@ -212,7 +255,8 @@ try:
         sys.stderr.write("fix: scripts/check-plugin-skill-drift.sh --write\n")
         raise SystemExit(1)
 
-    print(f"ok: {len(names)} generated skill copies match canonical roots")
+    n_files = sum(len(v) for v in packaged.values())
+    print(f"ok: {n_files} generated skill files match canonical roots")
 finally:
     shutil.rmtree(tmp, ignore_errors=True)
 PY
