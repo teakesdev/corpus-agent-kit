@@ -36,7 +36,7 @@ describe("lookupNaics", () => {
 });
 
 describe("searchLaw", () => {
-  it("POSTs a search_law tools/call and flattens content text", async () => {
+  it("POSTs a canonical law.search tools/call and flattens content text", async () => {
     vi.stubGlobal("fetch", vi.fn(async () => new Response(JSON.stringify({
       jsonrpc: "2.0", id: 1,
       result: { content: [{ type: "text", text: "§ 79-29-101 — Mississippi LLC Act…" }] },
@@ -45,7 +45,7 @@ describe("searchLaw", () => {
     expect(text).toContain("79-29-101");
     const body = JSON.parse((fetch as any).mock.calls[0][1].body);
     expect(body.method).toBe("tools/call");
-    expect(body.params.name).toBe("search_law");
+    expect(body.params.name).toBe("law.search");
     expect(body.params.arguments.jurisdiction).toBe("MS");
   });
   it("surfaces hosted errors as a readable string, never a throw", async () => {
