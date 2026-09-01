@@ -16,7 +16,7 @@ export async function searchLaw(query: string, jurisdiction?: string): Promise<s
         jsonrpc: "2.0",
         id: ++rpcId,
         method: "tools/call",
-        params: { name: "search_law", arguments: { query, ...(jurisdiction ? { jurisdiction } : {}), limit: 6 } },
+        params: { name: "law.search", arguments: { query, ...(jurisdiction ? { jurisdiction } : {}), limit: 6 } },
       }),
     });
     if (!res.ok) return `Law search is temporarily unavailable (HTTP ${res.status}). Continue the intake and note that citations are pending.`;
