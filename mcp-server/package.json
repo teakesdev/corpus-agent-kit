@@ -1,5 +1,5 @@
 {
-  "name": "@corpus-agent-kit/mcp-server",
+  "name": "@corpuslaw/mcp-server",
   "version": "0.1.0",
   "description": "MCP server giving any AI agent 571,582 provisions of US federal, state and municipal law with verbatim citations \u2014 plus LLC/nonprofit formation intake. Thin client of corpuslaw.us.",
   "keywords": [

@@ -1,11 +1,11 @@
-# @corpus-agent-kit/mcp-server
+# @corpuslaw/mcp-server
 
 MCP server giving any AI agent **571,582 provisions of US federal, state and
 municipal law** with verbatim citations — plus a complete LLC / nonprofit
 formation intake.
 
 ```bash
-npx -y @corpus-agent-kit/mcp-server
+npx -y @corpuslaw/mcp-server
 ```
 
 ## Claude Desktop / Cursor / any MCP client
@@ -15,7 +15,7 @@ npx -y @corpus-agent-kit/mcp-server
   "mcpServers": {
     "corpus-law": {
       "command": "npx",
-      "args": ["-y", "@corpus-agent-kit/mcp-server"],
+      "args": ["-y", "@corpuslaw/mcp-server"],
       "env": { "CORPUS_API_KEY": "your-key-here" }
     }
   }

@@ -222,6 +222,29 @@ Deploy to Alibaba Cloud Function Compute: see
 this bridge only for a client that can launch a stdio process but cannot speak
 HTTP MCP.
 
+```json
+{
+  "mcpServers": {
+    "corpus-law": {
+      "command": "npx",
+      "args": ["-y", "@corpuslaw/mcp-server"],
+      "env": { "CORPUS_API_KEY": "your-key-here" }
+    }
+  }
+}
+```
+
+Nothing to clone or build. The bridge forwards every MCP request to the hosted
+endpoint, adding your key — so formation handoffs it produces are attributed
+to you. `CORPUS_API_KEY` is optional; without it the bridge runs on the
+anonymous allotment.
+
+> Use the full scoped name. `npx corpus-mcp` resolves to an unrelated package
+> on npm — only `@corpuslaw/mcp-server` is ours.
+
+<details>
+<summary>Running from a clone instead</summary>
+
 ```bash
 cd mcp-server && npm install && npm run build
 ```
@@ -238,12 +261,9 @@ cd mcp-server && npm install && npm run build
 }
 ```
 
-Replace `/absolute/path/to/corpus-agent-kit` with the path to your clone. The
-bridge forwards every MCP request to the hosted endpoint, adding your key — so
-formation handoffs it produces are attributed to you.
+Replace `/absolute/path/to/corpus-agent-kit` with the path to your clone.
 
-> The package name `@corpus-agent-kit/mcp-server` is reserved for a future npm
-> publish; until then, build locally.
+</details>
 
 ### widget — embeddable law-search
 
