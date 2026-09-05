@@ -122,10 +122,29 @@ def check_doctrine() -> list[str]:
     research = (root / "skills/corpus-legal-research/SKILL.md").read_text(encoding="utf-8")
     errors: list[str] = []
     formation_desc = frontmatter_description(formation)
-    if "Also use for questions about current US" in formation:
-        errors.append("formation skill still claims law-research triggers")
+    research_desc = frontmatter_description(research)
+    # Law triggers are ALLOWED in the formation skill, but only as a secondary
+    # When-to-Use. That is the 2026-09-02 council ruling (corpus-strategy-
+    # 2026-09-02-1.md §9: "keep law as a *secondary* When-to-Use, not the first
+    # sentence"), and it supersedes the flat ban this check shipped with on
+    # 2026-08-30, two days earlier. The flat ban also made the one-way mirror
+    # unrunnable: upstream corpuslaw.us ships ONE skill and has no
+    # corpus-legal-research to route law questions to, so its description has to
+    # carry them. What actually protects routing is the ORDER, checked here, plus
+    # the research skill disowning formation from its own side.
+    formation_lead = re.split(r"(?<=\.)\s+", formation_desc)[0] if formation_desc else ""
+    if re.search(r"permits, zoning, licensing", formation_lead):
+        errors.append("formation skill LEADS with law-research triggers (council: law is secondary)")
+    if formation_desc and not re.search(r"\b(LLC|nonprofit|form)\b", formation_lead, re.I):
+        errors.append("formation skill description does not lead with formation")
     if re.search(r"permits, zoning, licensing", formation_desc):
-        errors.append("formation skill description still claims law-research triggers")
+        # Allowed — but only while the research skill still disowns formation,
+        # which is the other half of the disambiguation.
+        if not re.search(r"[Nn]ot for forming", research_desc):
+            errors.append(
+                "formation skill claims law triggers while the research skill no longer "
+                "says 'Not for forming an LLC or nonprofit' — nothing disambiguates them"
+            )
     for needle in ("1,000", "1000", "5,000", "5000", "$0.005", "0.005"):
         if needle in research:
             errors.append(f"research skill hardcodes quota number {needle!r}")

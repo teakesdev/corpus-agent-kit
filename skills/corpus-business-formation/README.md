@@ -7,17 +7,33 @@ skill-capable agent to form a US LLC or nonprofit through
 
 ## Install
 
-Copy the `corpus-business-formation/` directory into wherever your agent reads skills:
+On Hermes it is one line — no clone, no copy:
+
+```bash
+hermes skills install https://corpuslaw.us/skills/corpus-business-formation/SKILL.md
+```
+
+Or by well-known identifier, which resolves through
+`https://corpuslaw.us/.well-known/skills/index.json` and so survives a move of
+the static files:
+
+```bash
+hermes skills install well-known:https://corpuslaw.us/.well-known/skills/corpus-business-formation
+```
+
+For harnesses with no installer, copy the `corpus-business-formation/` directory
+into wherever your agent reads skills:
 
 | Harness | Path |
 |---|---|
 | Claude Code | `~/.claude/skills/` or `.claude/skills/` |
 | Cursor | `.agents/skills/` or `.cursor/skills/` |
 | VS Code / Copilot | `.github/skills/`, `.claude/skills/`, or `.agents/skills/` |
-| Hermes | `~/.hermes/skills/` |
 | OpenAI Codex | per `learn.chatgpt.com/docs/build-skills` |
 
-Then connect the MCP server — see `references/harness-setup.md`.
+Connecting the MCP server is **optional** — the skill runs the intake over plain
+HTTP when no connector is present. To add it anyway, see
+`references/harness-setup.md`.
 
 ## Why a skill and not just the MCP server
 
@@ -39,8 +55,13 @@ hermes plugins enable corpus
 
 ## Distribution note
 
-This is the canonical copy. The Hermes plugin at `plugins/corpus/` ships a
-generated copy of this skill; edit here, then run
+`SKILL.md` and `references/` here are a **one-way mirror** of the Corpus monorepo
+(`packages/skills/corpus-business-formation/`) and are not edited in this repo —
+a fix belongs upstream first, then comes back down as a re-mirror. This README is
+the exception: it describes *this* repo, so it lives here.
+
+The Hermes plugin at `plugins/corpus/` ships a generated copy of the skill (the
+mirrored bytes plus a provenance stamp). After a re-mirror, run
 `scripts/check-plugin-skill-drift.sh --write`.
 
 Apache-2.0.
