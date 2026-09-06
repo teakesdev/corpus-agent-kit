@@ -83,6 +83,7 @@ Clone and build — see [Quickstart](#quickstart) below.
 | `law.get_node` | Full official text of one provision |
 | `law.list_coverage` | Which jurisdictions are indexed, and how deeply |
 | `formation.requirements` | A state's exact field checklist, quirks, live pricing |
+| `formation.compare` | 19 formation services on price, renewals and agent capability — Corpus included, same rubric |
 | `formation.lookup_naics` | Find an industry code from a plain-English description |
 | `formation.handoff` | Validate a draft → prefilled, human-approved handoff link |
 | `account.status` | Quota, tier, and credit balance |

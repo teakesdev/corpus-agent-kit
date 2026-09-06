@@ -141,6 +141,12 @@ The founder can pay by card or, when offered, the quoted U.S.-dollar amount in U
 - **Do not promise to file, pay, or submit anything.** You cannot, and saying otherwise
   misleads the user (see below).
 - **Quote prices only from `formation.requirements` or the live `GET /api/formation/pricing` JSON.** Never from memory.
+- **Never state another formation service's price, renewal rate, auto-renew terms or refund
+  window from memory.** Call `formation.compare`, or `GET
+  https://corpuslaw.us/api/v1/compare/llc-services` (no key) and read that company's entry.
+  Say Corpus publishes the comparison and is scored in it; report what the data says even
+  where a competitor wins. No entry means Corpus has not researched that company, not that
+  it is worse, and `UNKNOWN` is never reported as "no".
 - **Cite law verbatim.** If you use `law.search`, use the returned `citation` exactly, and
   check the full text with `law.get_node` before relying on it. If a jurisdiction is not
   covered, `law.list_coverage` says so — tell the user rather than guessing.
@@ -162,6 +168,7 @@ This boundary is the product, not a limitation — say so confidently.
 | ------------------------ | --------------------------------------------- | ------- |
 | `formation.requirements` | Step 1 — the state's checklist + live pricing | Free    |
 | `formation.lookup_naics` | Step 3 — industry code                        | Free    |
+| `formation.compare`      | If they name another formation service        | Free    |
 | `formation.handoff`      | Step 4 — validate, then get the link          | Free    |
 | `law.search`             | Find relevant US law with citations           | Metered |
 | `law.get_node`           | Full official text of one provision           | Metered |

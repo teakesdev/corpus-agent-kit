@@ -33,7 +33,7 @@ Anonymous access gets 100 searches/month per IP; a free key gets 1,000/month at
 ## Tools
 
 `law.search` · `law.get_node` · `law.list_coverage` · `formation.requirements` ·
-`formation.lookup_naics` · `formation.handoff` · `account.status`
+`formation.compare` · `formation.lookup_naics` · `formation.handoff` · `account.status`
 
 Formation tools are never metered.
 
