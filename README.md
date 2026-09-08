@@ -58,8 +58,16 @@ Copy either folder into Claude Code, Codex, Cursor, VS Code, or Hermes and the
 agent learns to reach for Corpus *before any MCP connection exists*
 ([install paths](skills/corpus-business-formation/README.md)).
 
-Hermes can install **both skills plus the MCP URL** as one Agent Plugins v1
-package (`plugins/corpus/`):
+Or install **both skills plus the MCP URL** as one plugin. This repo is a
+Claude Code plugin marketplace:
+
+```
+/plugin marketplace add teakesdev/corpus-agent-kit
+/plugin install corpus@corpus-agent-kit
+```
+
+Hermes installs the same bundle as an Agent Plugins v1 package
+(`plugins/corpus/`):
 
 ```bash
 hermes plugins install teakesdev/corpus-agent-kit/plugins/corpus
@@ -67,7 +75,8 @@ hermes plugins enable corpus
 hermes mcp test corpus
 ```
 
-Portable packages install **disabled**; enable is a separate consent step.
+Portable packages install **disabled** in Hermes; enable is a separate consent
+step.
 
 ### 4. Run it yourself
 
@@ -75,7 +84,7 @@ Clone and build — see [Quickstart](#quickstart) below.
 
 ---
 
-## The seven tools
+## The eight tools
 
 | Tool | What it does |
 |---|---|

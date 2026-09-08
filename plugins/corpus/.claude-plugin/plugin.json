@@ -1,0 +1,20 @@
+{
+  "name": "corpus",
+  "displayName": "Corpus",
+  "version": "0.1.0",
+  "description": "Search and cite US law from official sources, and run an LLC or nonprofit formation intake end to end.",
+  "author": {
+    "name": "Corpus",
+    "url": "https://corpuslaw.us"
+  },
+  "homepage": "https://corpuslaw.us/agents",
+  "repository": "https://github.com/teakesdev/corpus-agent-kit",
+  "license": "Apache-2.0",
+  "keywords": ["legal", "law", "formation", "llc", "nonprofit", "compliance", "mcp"],
+  "mcpServers": {
+    "corpus": {
+      "type": "http",
+      "url": "https://corpuslaw.us/api/mcp"
+    }
+  }
+}

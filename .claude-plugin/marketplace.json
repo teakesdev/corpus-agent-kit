@@ -1,0 +1,27 @@
+{
+  "name": "corpus-agent-kit",
+  "owner": {
+    "name": "Corpus",
+    "url": "https://corpuslaw.us"
+  },
+  "metadata": {
+    "description": "US legal research and business-formation tools for coding agents, from Corpus.",
+    "version": "0.1.0"
+  },
+  "plugins": [
+    {
+      "name": "corpus",
+      "source": "./plugins/corpus",
+      "description": "Search and cite US law from official sources, and run an LLC or nonprofit formation intake end to end. Bundles two skills plus the hosted Corpus MCP server.",
+      "version": "0.1.0",
+      "author": {
+        "name": "Corpus",
+        "url": "https://corpuslaw.us"
+      },
+      "homepage": "https://corpuslaw.us/agents",
+      "repository": "https://github.com/teakesdev/corpus-agent-kit",
+      "license": "Apache-2.0",
+      "keywords": ["legal", "law", "formation", "llc", "nonprofit", "compliance", "mcp"]
+    }
+  ]
+}
