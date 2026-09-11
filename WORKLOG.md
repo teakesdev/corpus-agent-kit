@@ -44,7 +44,7 @@
 - Add `.cursor-plugin/plugin.json` under `plugins/corpus/` + repo-root
   `.cursor-plugin/marketplace.json` for Cursor/Grok marketplace submit.
 - Keep Hermes Agent Plugins `mcp.json` headerless; Cursor manifest inlines
-  MCP URL with optional `Bearer ${CORPUS_API_KEY}`.
+  MCP URL headerless (optional CORPUS_API_KEY declared, not empty-Bearer-injected).
 - No second MCP surface; GATE 2 / no auto-file language unchanged.
 
 ### Files
