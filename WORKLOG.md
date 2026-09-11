@@ -11,7 +11,7 @@
 - **Path:** MCP-first + thin packaging (not a Corpus fork, not a native rewrite).
 - **No `.cursor-plugin/`** unless Agent Plugins load fails — remote MCP URL is sufficient.
 - Preserve Hermes / Claude / Codex install paths; Grok Bot is an additional target.
-- GATE 2 stays sacred: handoff → human approval link only; no auto-file / no spend.
+- GATE 2 stays sacred for **filing**: handoff → human approval; never auto-file. Spend: USDC may be email-confirmed (see later entry).
 
 ### Prove (Grok Bot live)
 - Connected `user-corpus` → 8 tools.
@@ -45,7 +45,7 @@
   `.cursor-plugin/marketplace.json` for Cursor/Grok marketplace submit.
 - Keep Hermes Agent Plugins `mcp.json` headerless; Cursor manifest inlines
   MCP URL headerless (optional CORPUS_API_KEY declared, not empty-Bearer-injected).
-- No second MCP surface; GATE 2 / no auto-file language unchanged.
+- No second MCP surface; never-auto-file language kept (spend copy updated later).
 
 ### Files
 - `plugins/corpus/.cursor-plugin/plugin.json`
@@ -62,3 +62,14 @@
 
 ## 2026-09-10 — Reviewer follow-up
 - Restore headerless `mcpServers.url` in `.cursor-plugin/plugin.json` (no Authorization headers)
+
+## 2026-09-10 — USDC / gate copy
+
+### Spec AC
+- Filing GATE 2 unchanged (never auto-file).
+- Spend: USDC (Solana) email-confirmed; no extra human review of payment.
+- Demo path unchanged; USDC pay not required for Sept 15.
+- Ban “never spends”; no invented pay tool id.
+
+### Files
+- plugin + marketplace descriptions, README gates section, docs/GROK_BOT.md, plugin README gates note, WORKLOG

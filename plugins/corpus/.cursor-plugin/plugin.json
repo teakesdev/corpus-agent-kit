@@ -2,7 +2,7 @@
   "name": "corpus",
   "displayName": "Corpus",
   "version": "0.1.0",
-  "description": "Search and cite US law from official sources, and run an LLC or nonprofit formation intake end to end. Stops at a human approval link \u2014 never auto-files or spends.",
+  "description": "Search and cite US law from official sources, and run an LLC or nonprofit formation intake end to end. Never auto-files \u2014 filing still needs human approval. USDC pay is email-confirmed; card checkout remains on the web UI.",
   "author": {
     "name": "Corpus",
     "email": "renaissanceaisolutions@gmail.com"
