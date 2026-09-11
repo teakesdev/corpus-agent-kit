@@ -30,5 +30,10 @@
       }
     }
   },
-  "logo": "assets/logo.png"
+  "logo": "assets/logo.png",
+  "mcpServers": {
+    "corpus": {
+      "url": "https://corpuslaw.us/api/mcp"
+    }
+  }
 }
