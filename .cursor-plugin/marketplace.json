@@ -1,0 +1,38 @@
+{
+  "name": "corpus-agent-kit",
+  "owner": {
+    "name": "Corpus",
+    "email": "renaissanceaisolutions@gmail.com"
+  },
+  "metadata": {
+    "description": "US legal research and business-formation tools for coding agents and Grok Bot, from Corpus.",
+    "version": "0.1.0",
+    "pluginRoot": "plugins"
+  },
+  "plugins": [
+    {
+      "name": "corpus",
+      "source": "corpus",
+      "description": "Search and cite US law from official sources, and run an LLC or nonprofit formation intake end to end. Bundles formation + research skills plus the hosted Corpus MCP server. Human approval gate intact.",
+      "version": "0.1.0",
+      "author": {
+        "name": "Corpus",
+        "url": "https://corpuslaw.us"
+      },
+      "homepage": "https://corpuslaw.us/agents",
+      "repository": "https://github.com/teakesdev/corpus-agent-kit",
+      "license": "Apache-2.0",
+      "keywords": [
+        "legal",
+        "law",
+        "formation",
+        "llc",
+        "nonprofit",
+        "compliance",
+        "mcp",
+        "grok-bot"
+      ],
+      "logo": "AgentkitLogo.png"
+    }
+  ]
+}
