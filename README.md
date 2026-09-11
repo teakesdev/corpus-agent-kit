@@ -40,6 +40,19 @@ an LLC?"* and it will answer from live statutes with citations you can check.
 [free API key](https://corpuslaw.us/settings) — instant, self-serve, no waiting
 list — raises it to 1,000/month. Send it as `Authorization: Bearer <key>`.
 
+### 1b. Grok Bot / Cursor (same hosted MCP)
+
+Grok Bot and Cursor speak remote MCP connectors. Point one at
+`https://corpuslaw.us/api/mcp`, then ask *Create an LLC for Acme AI in
+Mississippi.* Formation tools stop at a human approval / handoff link — never
+auto-file or spend.
+
+Optional: install [`skills/corpus-business-formation/`](skills/corpus-business-formation/)
+for a guided intake. Full install notes and an optional **Company Formation
+Bot — powered by Corpus** template: [`docs/GROK_BOT.md`](docs/GROK_BOT.md).
+
+Running work log for this integration: [`WORKLOG.md`](WORKLOG.md).
+
 ### 2. Zero install: try the agent in a browser
 
 **[corpuslaw.us/autopilot](https://corpuslaw.us/autopilot)** — the Formation

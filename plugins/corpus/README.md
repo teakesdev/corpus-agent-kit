@@ -27,10 +27,12 @@ the canonical skill trees at the repo root (`SKILL.md` plus any
 |---|---|---|
 | Hermes (Agent Plugins v1) | Yes | Yes |
 | Claude Code (`.claude-plugin/`) | Yes | Yes |
+| Grok Bot / Cursor | No (remote MCP connector) | Yes — add `https://corpuslaw.us/api/mcp` (see [docs/GROK_BOT.md](../../docs/GROK_BOT.md)) |
 | Codex / ChatGPT | No (own layout: `.codex-plugin/` + `.mcp.json`) | Yes — `codex mcp add corpus --url https://corpuslaw.us/api/mcp` |
 | Any MCP-capable harness | No | Yes — same Streamable HTTP URL |
 
-A Codex folder-adapter is a later package, not this one.
+A Codex or Cursor Agent Plugins folder-adapter is a later package, not this one.
+Grok Bot does not need `.cursor-plugin/` while remote MCP connectors work.
 
 ## Install (Claude Code)
 
@@ -43,6 +45,21 @@ The repo root is a plugin marketplace:
 
 Both skills are auto-discovered from `skills/`, and the `corpus` MCP server is
 registered from `.claude-plugin/plugin.json`. No API key is required.
+
+## Install (Grok Bot / Cursor)
+
+Add the hosted MCP as a remote connector (no clone required):
+
+1. Connector name: `corpus`
+2. URL: `https://corpuslaw.us/api/mcp`
+3. Optional header: `Authorization: Bearer <key>` from https://corpuslaw.us/settings
+
+Optional: copy `skills/corpus-business-formation/` (and
+`skills/corpus-legal-research/`) from the repo root into the bot's skill
+library for richer formation intake.
+
+Full notes + optional **Company Formation Bot — powered by Corpus** template:
+[docs/GROK_BOT.md](../../docs/GROK_BOT.md).
 
 ## Install (Hermes)
 
