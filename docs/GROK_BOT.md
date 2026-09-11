@@ -50,8 +50,8 @@ Repo root: `.cursor-plugin/marketplace.json` (pluginRoot `plugins`).
 https://cursor.com/marketplace/publish (manual review). Local test:
 symlink `plugins/corpus` into `~/.cursor/plugins/local/corpus`, reload Cursor.
 
-Optional `CORPUS_API_KEY` variable raises research quota; never commit the
-value. Formation remains free and GATE 2 (human approval) stays intact.
+Optional `CORPUS_API_KEY` is declared but MCP stays headerless (no empty
+Bearer). Formation remains free; GATE 2 stays intact. Logo: `plugins/corpus/assets/logo.png`.
 
 ## Optional bot template
 

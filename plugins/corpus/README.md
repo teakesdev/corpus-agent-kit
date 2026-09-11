@@ -69,9 +69,10 @@ ln -s "$(pwd)/plugins/corpus" ~/.cursor/plugins/local/corpus
 3. Wait for Cursor's curated review (open-source required; updates re-reviewed).
 
 Optional `CORPUS_API_KEY`: declared as a plugin variable (not stored in the
-repo). Set it under Plugins → Configure after install to raise research
-quota. Formation tools stay free without a key. Leave Hermes `mcp.json`
-headerless — Cursor's manifest supplies the Bearer placeholder.
+repo). Marketplace MCP stays **headerless** (same as Hermes) so an unset key
+cannot expand to `Bearer ` and break anonymous use. Formation stays free;
+set a key under Plugins → Configure / connector settings when you want higher
+research quota.
 
 ## Install (Grok Bot / Cursor)
 

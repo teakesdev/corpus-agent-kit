@@ -20,22 +20,15 @@
     "mcp",
     "grok-bot"
   ],
-  "mcpServers": {
-    "corpus": {
-      "url": "https://corpuslaw.us/api/mcp",
-      "headers": {
-        "Authorization": "Bearer ${CORPUS_API_KEY}"
-      }
-    }
-  },
   "variables": {
     "type": "object",
     "properties": {
       "CORPUS_API_KEY": {
         "type": "string",
         "title": "Corpus API key",
-        "description": "Optional. Raises research search quota (formation tools stay free without a key). Get a free key at https://corpuslaw.us/settings \u2014 never commit the value."
+        "description": "Optional. Raises research search quota after install (Plugins \u2192 Configure). Formation tools stay free without a key. Not injected as an empty Bearer header \u2014 marketplace MCP stays headerless like Hermes. Get a free key at https://corpuslaw.us/settings \u2014 never commit the value."
       }
     }
-  }
+  },
+  "logo": "assets/logo.png"
 }

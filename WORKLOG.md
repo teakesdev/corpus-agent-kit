@@ -55,3 +55,7 @@
 
 ### Next
 - Ty submits repo at https://cursor.com/marketplace/publish after merge.
+
+## 2026-09-10 — Reviewer fixes on PR #4
+- Logo: commit `plugins/corpus/assets/logo.png`; marketplace + plugin manifest `logo: assets/logo.png`
+- Bearer: drop `Authorization: Bearer ${CORPUS_API_KEY}` from Cursor manifest; discover headerless `mcp.json` so keyless works

@@ -32,7 +32,7 @@
         "mcp",
         "grok-bot"
       ],
-      "logo": "AgentkitLogo.png"
+      "logo": "assets/logo.png"
     }
   ]
 }
