@@ -110,6 +110,12 @@ hermes mcp add corpus --url "https://corpuslaw.us/api/mcp" --auth header
 
 Hosted server: `https://corpuslaw.us/api/mcp` (Streamable HTTP).
 
+## Gates
+
+- **Never auto-files.** Filing still requires human GATE 2 approval (hash-bound payload).
+- **USDC pay** may be email-confirmed only (no extra human review of the payment). Card checkout remains on the web UI.
+- Do not invent MCP pay tool ids in docs until Ty names the endpoint.
+
 ## License
 
 Apache-2.0 — same as the rest of [corpus-agent-kit](https://github.com/teakesdev/corpus-agent-kit).

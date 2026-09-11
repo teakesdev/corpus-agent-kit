@@ -25,8 +25,7 @@ from https://corpuslaw.us/settings raises the quota.
 
 Verified dry-run (2026-09-10): `formation.requirements` for MS LLC returns the
 live checklist and all-in pricing; `formation.handoff` returns **COMPLETE** and
-a prefilled approval link. Nothing files or charges until a human acts on that
-link (GATE 2).
+a prefilled approval link. Agents never auto-file (GATE 2 human approval). USDC pay is email-confirmed; filing still needs human approval. Sept 15 demo stops at the handoff link — USDC pay is optional.
 
 ## Install skills (optional, richer intake)
 
@@ -51,7 +50,7 @@ https://cursor.com/marketplace/publish (manual review). Local test:
 symlink `plugins/corpus` into `~/.cursor/plugins/local/corpus`, reload Cursor.
 
 Optional `CORPUS_API_KEY` is declared but MCP stays headerless (no empty
-Bearer). Formation remains free; GATE 2 stays intact. Logo: `plugins/corpus/assets/logo.png`.
+Bearer). Formation intake remains free to start; GATE 2 (never auto-file) stays intact. Logo: `plugins/corpus/assets/logo.png`.
 
 ## Optional bot template
 
@@ -62,8 +61,8 @@ Template contents (no credentials):
 - MCP URL: `https://corpuslaw.us/api/mcp`
 - Pointer to `skills/corpus-business-formation/`
 - Starter prompt: *Create an LLC for Acme AI in Mississippi.*
-- Guardrail text: stop at the approval / handoff link; never file or spend
-  automatically.
+- Guardrail text: never auto-file; stop at the approval / handoff link; USDC pay is email-confirmed if used
+
 
 ## Demo punchline
 

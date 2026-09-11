@@ -13,7 +13,7 @@
     {
       "name": "corpus",
       "source": "corpus",
-      "description": "Search and cite US law from official sources, and run an LLC or nonprofit formation intake end to end. Bundles formation + research skills plus the hosted Corpus MCP server. Human approval gate intact.",
+      "description": "Search and cite US law from official sources, and run an LLC or nonprofit formation intake end to end. Bundles formation + research skills plus the hosted Corpus MCP server. Never auto-files; USDC pay is email-confirmed; filing still needs human approval.",
       "version": "0.1.0",
       "author": {
         "name": "Corpus",

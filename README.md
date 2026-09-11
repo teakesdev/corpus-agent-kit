@@ -44,8 +44,7 @@ list — raises it to 1,000/month. Send it as `Authorization: Bearer <key>`.
 
 Grok Bot and Cursor speak remote MCP connectors. Point one at
 `https://corpuslaw.us/api/mcp`, then ask *Create an LLC for Acme AI in
-Mississippi.* Formation tools stop at a human approval / handoff link — never
-auto-file or spend.
+Mississippi.* Formation tools never auto-file: handoff stops at a human approval link. USDC pay is email-confirmed; filing still needs human approval.
 
 Optional: install [`skills/corpus-business-formation/`](skills/corpus-business-formation/)
 for a guided intake. For Cursor Marketplace listing, see
@@ -174,14 +173,24 @@ The autopilot uses two Qwen models with different cost/quality profiles:
 The lane switch is automatic. Routing logic lives in `autopilot/src/agent.ts`.
 The hourly spend cap (`SPEND_CAP_TURNS_PER_HOUR`) applies across both lanes.
 
-## Human in the loop (GATE 2)
+## Human in the loop (gates)
 
-The autopilot produces a **prefilled draft URL** — it never initiates a filing or
-charges a card. On the Corpus platform side, every order passes GATE 2: a human
-reviews and approves a snapshot of the exact filing payload, and that approval is
-cryptographically bound to a hash of the payload. If the payload changes by a
-single byte after approval, the gate rejects it. The agent is architecturally
-incapable of bypassing this.
+**Filing (GATE 2) — unchanged.** The autopilot / MCP formation flow produces a
+**prefilled draft / handoff URL**. Agents **never auto-file**. On the Corpus
+platform, every filing payload still passes GATE 2: a human reviews and approves
+a snapshot of the exact filing payload, cryptographically bound to a hash of that
+payload. If the payload changes by a single byte after approval, the gate rejects
+it. The agent is architecturally incapable of bypassing filing approval.
+
+**Spend — updated.** Agents may settle formation (and related) charges in
+**USDC (Solana)** with **email confirmation only** — no extra human review of the
+payment itself. Card / web checkout human flows still exist on corpuslaw.us.
+Docs refer to this as a USDC checkout / pay request via Corpus until the exact
+MCP tool id is named.
+
+**Sept 15 demo path — unchanged.** `formation.requirements` → draft →
+`formation.handoff` COMPLETE → approval link. Completing USDC pay is **not**
+required for the livestream demo.
 
 ## Quickstart
 
