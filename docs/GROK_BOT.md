@@ -38,12 +38,20 @@ Copy from this repo into your Grok Bot / Cursor skills library:
 Same skill trees ship inside [`plugins/corpus/`](../plugins/corpus/) for
 Hermes (Agent Plugins v1) and Claude Code (`.claude-plugin/`).
 
-## Why there is no `.cursor-plugin/` yet
+## Cursor / Grok Bot marketplace packaging
 
-Grok Bot and Cursor already speak remote MCP connectors. Connecting the hosted
-URL is enough for the livestream demo. A Cursor Agent Plugins adapter would
-duplicate Hermes / Claude wrappers without unlocking a new capability — add it
-only if marketplace / Agent Plugins load fails without a native manifest.
+`plugins/corpus/` now includes `.cursor-plugin/plugin.json` (Cursor Plugin
+manifest) alongside Agent Plugins `plugin.json` / `mcp.json` and Claude's
+`.claude-plugin/`. Same hosted MCP + skills — no second Corpus surface.
+
+Repo root: `.cursor-plugin/marketplace.json` (pluginRoot `plugins`).
+
+**Publish:** Ty submits https://github.com/teakesdev/corpus-agent-kit at
+https://cursor.com/marketplace/publish (manual review). Local test:
+symlink `plugins/corpus` into `~/.cursor/plugins/local/corpus`, reload Cursor.
+
+Optional `CORPUS_API_KEY` is declared but MCP stays headerless (no empty
+Bearer). Formation remains free; GATE 2 stays intact. Logo: `plugins/corpus/assets/logo.png`.
 
 ## Optional bot template
 

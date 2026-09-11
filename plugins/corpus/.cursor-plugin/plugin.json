@@ -1,0 +1,39 @@
+{
+  "name": "corpus",
+  "displayName": "Corpus",
+  "version": "0.1.0",
+  "description": "Search and cite US law from official sources, and run an LLC or nonprofit formation intake end to end. Stops at a human approval link \u2014 never auto-files or spends.",
+  "author": {
+    "name": "Corpus",
+    "email": "renaissanceaisolutions@gmail.com"
+  },
+  "homepage": "https://corpuslaw.us/agents",
+  "repository": "https://github.com/teakesdev/corpus-agent-kit",
+  "license": "Apache-2.0",
+  "keywords": [
+    "legal",
+    "law",
+    "formation",
+    "llc",
+    "nonprofit",
+    "compliance",
+    "mcp",
+    "grok-bot"
+  ],
+  "variables": {
+    "type": "object",
+    "properties": {
+      "CORPUS_API_KEY": {
+        "type": "string",
+        "title": "Corpus API key",
+        "description": "Optional. Raises research search quota after install (Plugins \u2192 Configure). Formation tools stay free without a key. Not injected as an empty Bearer header \u2014 marketplace MCP stays headerless like Hermes. Get a free key at https://corpuslaw.us/settings \u2014 never commit the value."
+      }
+    }
+  },
+  "logo": "assets/logo.png",
+  "mcpServers": {
+    "corpus": {
+      "url": "https://corpuslaw.us/api/mcp"
+    }
+  }
+}

@@ -48,8 +48,11 @@ Mississippi.* Formation tools stop at a human approval / handoff link — never
 auto-file or spend.
 
 Optional: install [`skills/corpus-business-formation/`](skills/corpus-business-formation/)
-for a guided intake. Full install notes and an optional **Company Formation
-Bot — powered by Corpus** template: [`docs/GROK_BOT.md`](docs/GROK_BOT.md).
+for a guided intake. For Cursor Marketplace listing, see
+[`plugins/corpus/`](plugins/corpus/) (`.cursor-plugin/`) and submit the repo at
+https://cursor.com/marketplace/publish. Full install notes and an optional
+**Company Formation Bot — powered by Corpus** template:
+[`docs/GROK_BOT.md`](docs/GROK_BOT.md).
 
 Running work log for this integration: [`WORKLOG.md`](WORKLOG.md).
 

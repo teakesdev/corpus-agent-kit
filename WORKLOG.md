@@ -37,3 +37,28 @@
 ### Next action
 - Reviewer: AC fit on this PR (approval gate intact, Hermes/Claude unbroken, install notes usable).
 - Shipper: merge when green; Spec already has outreach pack for Sawyer / livestream.
+
+## 2026-09-10 (later) — Cursor marketplace packaging
+
+### Decisions
+- Add `.cursor-plugin/plugin.json` under `plugins/corpus/` + repo-root
+  `.cursor-plugin/marketplace.json` for Cursor/Grok marketplace submit.
+- Keep Hermes Agent Plugins `mcp.json` headerless; Cursor manifest inlines
+  MCP URL headerless (optional CORPUS_API_KEY declared, not empty-Bearer-injected).
+- No second MCP surface; GATE 2 / no auto-file language unchanged.
+
+### Files
+- `plugins/corpus/.cursor-plugin/plugin.json`
+- `plugins/corpus/assets/logo.png` (copy of AgentkitLogo for path rules)
+- `.cursor-plugin/marketplace.json`
+- README / `docs/GROK_BOT.md` publish steps
+
+### Next
+- Ty submits repo at https://cursor.com/marketplace/publish after merge.
+
+## 2026-09-10 — Reviewer fixes on PR #4
+- Logo: commit `plugins/corpus/assets/logo.png`; marketplace + plugin manifest `logo: assets/logo.png`
+- Bearer: drop `Authorization: Bearer ${CORPUS_API_KEY}` from Cursor manifest; discover headerless `mcp.json` so keyless works
+
+## 2026-09-10 — Reviewer follow-up
+- Restore headerless `mcpServers.url` in `.cursor-plugin/plugin.json` (no Authorization headers)
