@@ -74,6 +74,10 @@ cannot expand to `Bearer ` and break anonymous use. Formation stays free;
 set a key under Plugins → Configure / connector settings when you want higher
 research quota.
 
+Marketplace MCP stays headerless on purpose — the agent-checkout rehearsal
+header (`X-Corpus-Rehearsal`) belongs on a private connector only, never in this
+package (see [docs/GROK_BOT.md](../../docs/GROK_BOT.md)).
+
 ## Install (Grok Bot / Cursor)
 
 Add the hosted MCP as a remote connector (no clone required):
