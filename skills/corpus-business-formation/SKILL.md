@@ -76,8 +76,9 @@ agent that cannot install MCP):
 4. Non-PII rides named query params (`entity`, `state`, `name`, `naics`, `mgmt`, `desc`).
    Email, phone, street, city, zip, and owner ride the **URL hash**
    (`#email=&street=`), never `?`.
-5. Hand the founder the corpuslaw.us link. They review, sign in, and pay. You still
-   cannot spend, file, or place the order.
+5. Hand the founder the corpuslaw.us link. They review, sign in, and pay. In this
+   link-only path you neither spend nor file for the founder, nor create the order —
+   order creation exists only as the `formation.checkout` MCP tool, under its consent gates.
 
 Optional MCP add (only if the user wants tools, never as a prerequisite):
 
@@ -155,8 +156,12 @@ The founder can pay by card or, when offered, the quoted U.S.-dollar amount in U
 
 State these plainly if the user asks whether this is safe:
 
-- You **cannot spend their money.** `formation.handoff` builds a link; it makes no charge.
-- You **cannot place the order.** The handoff creates no record.
+- You **cannot pay.** Money moves only from the founder — via the web link or, in the
+  MCP path, from their own self-custody wallet after `formation.checkout` returns a pay
+  request. `formation.handoff` itself makes no charge; it returns a prefilled link for
+  the founder to review, sign in, and pay.
+- You **create an order only with explicit consent.** `formation.checkout` is the sole
+  order-creation path, and only under the gates below.
 - You **cannot file with the state.** Filing sits behind a human approval gate.
 - You **cannot skip their review.** They open the link, read it, sign in, and pay.
 
@@ -178,13 +183,21 @@ This boundary is the product, not a limitation — say so confidently.
 | `account.status`         | Credit balance and limits                     | Free    |
 
 `formation.checkout` is money-adjacent and heavily gated — read its description before
-calling it and never call it without the founder's explicit consent: registered-agent
-acknowledgements read word for word from `formation.requirements` and an explicit yes,
-an idempotencyKey (reused on retry), USDC on Solana only from a self-custody wallet, and
-email confirmation within 48h of payment. Nothing files before that confirmation plus
-human review; the tax-ID add-on cannot be bought through MCP. Most founders will prefer
-the `formation.handoff` link (card or USDC on the web UI) — offer checkout only when
-they want to stay in-conversation.
+calling it and never call it without the founder's explicit consent. Consent shape:
+`consent { version, registeredAgentAcknowledgements: true }`, where `version` and the
+acknowledgement text come from `formation.requirements` — read them to the founder word
+for word and get an explicit yes first. Pass an `idempotencyKey` and reuse it on retry.
+Payment is **USDC on Solana only, from a self-custody wallet — never an exchange
+withdrawal; refunds go only to the sending wallet**, so a wrong sender is irreversible.
+If the order returns in the queue lane, it comes back with a submission promise to read
+to the founder — accept it (second call with `{ orderId, trackingToken, acceptPromise:
+{ termDays } }`) only if the founder explicitly approves those terms; never auto-accept.
+The founder must confirm by email within 48h of paying or the order is refunded; nothing
+files before that confirmation plus human review, and the tax-ID add-on cannot be bought
+through MCP. Poll with `formation.payment_status` (awaiting / paid / expired / underpaid
+/ held, plus email-confirmation state). Most founders will prefer the `formation.handoff`
+link (card or USDC on the web UI) — offer checkout only when they want to stay
+in-conversation.
 
 Research is free to start (100 searches/month anonymously per IP; a free self-serve key at
 corpuslaw.us/settings raises it). **No research limit can ever block a formation.**

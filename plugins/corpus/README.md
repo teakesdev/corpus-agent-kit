@@ -117,9 +117,12 @@ Hosted server: `https://corpuslaw.us/api/mcp` (Streamable HTTP).
 - **MCP pay tools.** `formation.checkout` creates the order and returns a USDC (Solana)
   payment request; `formation.payment_status` polls it (awaiting / paid / expired /
   underpaid / held, plus email-confirmation state). The founder must pay from a
-  self-custody wallet and confirm via the emailed link within 48h — nothing files
-  before that confirmation and human review. The tax-ID add-on cannot be bought
-  through MCP.
+  self-custody wallet — never an exchange withdrawal; refunds go only to the sending
+  wallet — and confirm via the emailed link within 48h; nothing files before that
+  confirmation and human review. A queue-lane order returns a submission promise the
+  founder must approve before it is accepted. The tax-ID add-on cannot be bought
+  through MCP. Order creation is consent-gated; `formation.handoff` alone never
+  creates an order or a charge.
 
 ## License
 
