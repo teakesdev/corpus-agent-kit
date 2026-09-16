@@ -99,7 +99,7 @@ Clone and build — see [Quickstart](#quickstart) below.
 
 ---
 
-## The eight tools
+## The ten tools
 
 | Tool | What it does |
 |---|---|
@@ -110,6 +110,8 @@ Clone and build — see [Quickstart](#quickstart) below.
 | `formation.compare` | 19 formation services on price, renewals and agent capability — Corpus included, same rubric |
 | `formation.lookup_naics` | Find an industry code from a plain-English description |
 | `formation.handoff` | Validate a draft → prefilled, human-approved handoff link |
+| `formation.checkout` | Create the founder's order + USDC (Solana) payment request — self-custody wallet, email confirmation within 48h, human review before any filing |
+| `formation.payment_status` | Poll the USDC payment: awaiting / paid / expired / underpaid / held, plus email-confirmation state |
 | `account.status` | Quota, tier, and credit balance |
 
 Formation tools are **never metered** — they stay free with or without a key.

@@ -10,8 +10,9 @@ install the formation skill, and keep Hermes / Claude / Codex targets intact.
 https://corpuslaw.us/api/mcp
 ```
 
-Streamable HTTP. Eight tools, including `formation.requirements`,
-`formation.lookup_naics`, and `formation.handoff`. Formation tools are free
+Streamable HTTP. Ten tools, including `formation.requirements`,
+`formation.lookup_naics`, `formation.handoff`, `formation.checkout`, and
+`formation.payment_status`. Formation tools are free
 (no credit burn). Research is rate-limited anonymously; optional Bearer key
 from https://corpuslaw.us/settings raises the quota.
 

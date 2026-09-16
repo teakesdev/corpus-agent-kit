@@ -170,10 +170,21 @@ This boundary is the product, not a limitation — say so confidently.
 | `formation.lookup_naics` | Step 3 — industry code                        | Free    |
 | `formation.compare`      | If they name another formation service        | Free    |
 | `formation.handoff`      | Step 4 — validate, then get the link          | Free    |
+| `formation.checkout`     | Step 5 — create the order + USDC pay request  | Free    |
+| `formation.payment_status` | Poll the payment (awaiting/paid/expired/underpaid/held) | Free |
 | `law.search`             | Find relevant US law with citations           | Metered |
 | `law.get_node`           | Full official text of one provision           | Metered |
 | `law.list_coverage`      | Which jurisdictions are covered               | Metered |
 | `account.status`         | Credit balance and limits                     | Free    |
+
+`formation.checkout` is money-adjacent and heavily gated — read its description before
+calling it and never call it without the founder's explicit consent: registered-agent
+acknowledgements read word for word from `formation.requirements` and an explicit yes,
+an idempotencyKey (reused on retry), USDC on Solana only from a self-custody wallet, and
+email confirmation within 48h of payment. Nothing files before that confirmation plus
+human review; the tax-ID add-on cannot be bought through MCP. Most founders will prefer
+the `formation.handoff` link (card or USDC on the web UI) — offer checkout only when
+they want to stay in-conversation.
 
 Research is free to start (100 searches/month anonymously per IP; a free self-serve key at
 corpuslaw.us/settings raises it). **No research limit can ever block a formation.**
