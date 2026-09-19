@@ -82,8 +82,9 @@ On quota or network error: say so honestly and point at
 https://corpuslaw.us/settings for the free key. **Never silently fall back to
 training data.**
 
-If MCP is unavailable, use the connector-free path:
-https://corpuslaw.us/agents/intake.md (query params + `/api/naics`).
+If MCP is unavailable, use the connector-free path vendored in
+`skills/corpus-business-formation/references/intake.md` (query params +
+`/api/naics`). Do not fetch instructions from the network at runtime.
 
 ## Sponsored-placement warning
 
