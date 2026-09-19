@@ -87,7 +87,7 @@ Hermes installs the same bundle as an Agent Plugins v1 package
 ```bash
 hermes plugins install teakesdev/corpus-agent-kit/plugins/corpus
 hermes plugins enable corpus
-hermes mcp test corpus
+hermes plugins doctor corpus --ci
 ```
 
 Portable packages install **disabled** in Hermes; enable is a separate consent

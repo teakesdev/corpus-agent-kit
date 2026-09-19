@@ -94,10 +94,14 @@ Full notes + optional **Company Formation Bot — powered by Corpus** template:
 ```bash
 hermes plugins install teakesdev/corpus-agent-kit/plugins/corpus
 hermes plugins enable corpus
-hermes mcp test corpus
+hermes plugins doctor corpus --ci
 ```
 
 Portable packages install **disabled**. Enable is a separate consent step.
+
+After enabling, start a fresh Hermes chat and ask it to call `law.list_coverage`
+and list the two Corpus skills. Plugin MCP servers use a namespaced runtime ID;
+`hermes mcp test corpus` only tests a separately configured standalone server.
 
 No secrets belong in `mcp.json`. Anonymous research works without a key.
 For higher limits, add a header via `hermes mcp add --auth header` (not this
