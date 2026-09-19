@@ -33,9 +33,13 @@ Anonymous access gets 100 searches/month per IP; a free key gets 1,000/month at
 ## Tools
 
 `law.search` · `law.get_node` · `law.list_coverage` · `formation.requirements` ·
-`formation.compare` · `formation.lookup_naics` · `formation.handoff` · `account.status`
+`formation.compare` · `formation.lookup_naics` · `formation.handoff` ·
+`formation.checkout` · `formation.payment_status` · `account.status`
 
-Formation tools are never metered.
+Formation tools are never metered. `formation.checkout` creates an order and USDC
+payment request only after explicit same-turn amount confirmation and consent.
+The founder pays from a self-custody wallet and confirms by email; filing remains
+human-reviewed. Card payment uses the web handoff.
 
 ## Environment
 

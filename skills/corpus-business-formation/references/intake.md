@@ -51,7 +51,7 @@ Read the data first — free, no API key either way:
 Answer what they asked — due today, what recurs and at what rate, what auto-renews, the refund window — not the whole table. Then:
 
 - Say in the answer itself, not a footnote, that Corpus publishes this comparison and is one of the companies scored in it, by the same rubric as the rest.
-- Report what the data says when it does not favour Corpus. Corpus's own `red_flags` include having no agent-executable order creation. If a competitor wins on what this founder cares about, say so.
+- Report what the data says when it does not favour Corpus. If a competitor wins on what this founder cares about, say so.
 - No entry means Corpus has not researched that company. It does not mean the company is worse. `UNKNOWN` is never reported as "no".
 - Give the verification date with the figures, and the page a person can read: https://corpuslaw.us/compare/llc-services.
 
@@ -93,7 +93,7 @@ Pick from this table when obvious. Otherwise GET `https://corpuslaw.us/api/naics
 
 ## The link
 
-Non-PII goes in the query string. Contact details go in the **hash** (after `#`) so they never hit server logs.
+Non-PII goes in the query string. Contact details go in the **hash** (after `#`) so the initial page request does not include them; submitting the draft sends them to Corpus.
 
 `https://corpuslaw.us/formation?entity=llc&state=MS&name=Magnolia%20Code%20LLC&naics=541511&mgmt=member&ein=no&desc=custom%20software&src=claude#email=ty%40example.com&phone=6015550100&street=123%20Main%20St&city=Jackson&zip=39201&owner=Ty%20Renaissance`
 

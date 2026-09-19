@@ -73,3 +73,17 @@
 
 ### Files
 - plugin + marketplace descriptions, README gates section, docs/GROK_BOT.md, plugin README gates note, WORKLOG
+
+## 2026-09-19 — Hermes catalog readiness ($$/R2/M)
+
+Merged Teknium PR #6 (vendored intake, same-turn amount consent, marketing/PII
+disclosure). Added CI for tests, typechecks, build, npm pack, skill drift and
+manifest transport/asset checks. Replaced the plugin's misleading standalone
+MCP verification command with plugin doctor plus a fresh-session tool call.
+Corrected the bridge README to list ten tools and removed the obsolete claim
+that agent checkout is unavailable from the vendored intake.
+
+Validation: 39 autopilot + 6 bridge tests, typechecks, builds, packaging and
+Hermes validate/doctor pass. Clean temporary Hermes home installed the pinned
+plugin over SSH after HTTPS timed out; runtime discovery/live call evidence is
+recorded with the Corpus release-readiness report. No paid transaction performed.
