@@ -52,8 +52,9 @@ def build(ref, output_dir):
     version = manifest["version"]
     if not re.fullmatch(r"[0-9]+\.[0-9]+\.[0-9]+", version):
         raise ValueError("Release version must be major.minor.patch")
-    tag = ref.removeprefix("refs/tags/")
-    if tag.startswith("corpus-openai-v") and tag != f"corpus-openai-v{version}":
+    resolved_ref = git("rev-parse", "--symbolic-full-name", "--verify", "--end-of-options", ref).decode().strip()
+    tag = resolved_ref.removeprefix("refs/tags/")
+    if resolved_ref.startswith("refs/tags/") and tag != f"corpus-openai-v{version}":
         raise ValueError("Release tag does not match the OpenAI manifest version")
     for name in ("corpus-business-formation", "corpus-legal-research"):
         if f"plugins/corpus/skills/{name}/SKILL.md" not in files:

@@ -150,3 +150,9 @@ passed; repeated builds of the same ref matched byte-for-byte. GitHub CI passed
 at `52d8397`. Older Cursor and Grok work is already present (with later copy
 corrections); initialize and canonical law.search fixes are already ancestors of
 main. Existing peer branches/checkouts remain untouched.
+
+Greptile's PR review found two packaging gaps. Release tag validation now checks
+Git's resolved tag ref, including differently named tags; isolated repository
+tests cover invalid names/versions, a valid annotated tag, and byte stability
+despite working-tree edits (3 tests passed). CI now builds twice and compares
+archives. These fixes do not touch user tags or publish a release.
