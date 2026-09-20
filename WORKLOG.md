@@ -87,3 +87,41 @@ Validation: 39 autopilot + 6 bridge tests, typechecks, builds, packaging and
 Hermes validate/doctor pass. Clean temporary Hermes home installed the pinned
 plugin over SSH after HTTPS timed out; runtime discovery/live call evidence is
 recorded with the Corpus release-readiness report. No paid transaction performed.
+
+## 2026-09-12 — agent-checkout rehearsal split (docs only)
+
+### Verified live on corpuslaw.us (no deploy this session)
+- Public headerless `https://corpuslaw.us/api/mcp` still lists **8 tools**:
+  `law.search`, `law.get_node`, `law.list_coverage`, `account.status`,
+  `formation.requirements`, `formation.compare`, `formation.lookup_naics`,
+  `formation.handoff`.
+- `formation.checkout` / `formation.payment_status` exist on the server but are
+  gated: without `X-Corpus-Rehearsal`, `tools/call` returns
+  `agent_checkout_disabled` (**not** `Unknown tool`). Production flag = `rehearsal`.
+
+### Decisions
+- Rehearsal is a **private connector header** only: `X-Corpus-Rehearsal` with the
+  token stored in Vercel as `FORMATION_AGENT_CHECKOUT_REHEARSAL_TOKEN`. The token
+  is never written into this repo.
+- Marketplace / published plugin stays **headerless**: `plugins/corpus/mcp.json`
+  and `plugins/corpus/.cursor-plugin/plugin.json` remain URL-only (no
+  `Authorization`, no `X-Corpus-Rehearsal`). Both re-read and confirmed unchanged.
+- Public demo path unchanged — stops at the `formation.handoff` link. The two
+  checkout tools stay out of the public skill tool table until the public flag is on.
+- GATE 2 unchanged: never auto-file. Rehearsal covers spend, not filing.
+- **No USDC canary run and none claimed.**
+
+### Files changed
+- `docs/GROK_BOT.md` — 8-tool public install kept; new "Rehearsal connector (not
+  the marketplace plugin)" section; 2026-09-12 re-verification line
+- `plugins/corpus/README.md` — one sentence: marketplace MCP headerless on
+  purpose, rehearsal is a private connector header
+- `WORKLOG.md` — this entry
+
+### Not done (deliberately)
+- No deploy. No manifest/header edits. No `SKILL.md` formation-procedure change.
+- Env files remain absent by design.
+
+### Next
+- Flip the public flag (server-side) before the two checkout tools go into the
+  public skill tool table; re-verify the public tool list at that point.
