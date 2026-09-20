@@ -62,7 +62,7 @@ Autopilot from this repo (`autopilot/`), running on Alibaba Cloud Function
 Compute. Describe a business in plain English; get a cited launch checklist and
 a prefilled formation handoff.
 
-### 3. Drop a skill folder — or install the Hermes plugin
+### 3. Drop a skill folder — or install a plugin
 
 Two portable [Agent Skills](https://agentskills.io/specification):
 
@@ -74,7 +74,19 @@ agent learns to reach for Corpus *before any MCP connection exists*
 ([install paths](skills/corpus-business-formation/README.md)).
 
 Or install **both skills plus the MCP URL** as one plugin. This repo is a
-Claude Code plugin marketplace:
+plugin marketplace. For **OpenAI Codex**, use a local checkout or the extracted
+OpenAI release archive:
+
+```bash
+codex plugin marketplace add /absolute/path/to/corpus-agent-kit
+codex plugin add corpus@corpus-agent-kit
+```
+
+See the [OpenAI package guide](docs/OPENAI_PLUGIN.md) for archive installation,
+verification, and reproducible tagged builds. Restart Codex or open a new task
+after installation so both skills and the MCP connector load.
+
+For **Claude Code**:
 
 ```
 /plugin marketplace add teakesdev/corpus-agent-kit
@@ -136,8 +148,8 @@ guessing.
 - **`widget/`** — embeddable law-search widget (Preact, ~12 kB gzipped).
 - **`skills/corpus-business-formation/`** — portable Agent Skill (formation).
 - **`skills/corpus-legal-research/`** — portable Agent Skill (live statute search).
-- **`plugins/corpus/`** — Agent Plugins v1 package for Hermes (generated skill
-  copies + headerless `mcp.json`).
+- **`plugins/corpus/`** — plugin wrappers for Codex, Hermes, Claude Code, and
+  Cursor, sharing generated skills and the headerless hosted MCP endpoint.
 
 All of these are thin clients of the hosted Corpus platform. The law corpus, hybrid
 search engine, human approval gate, and filing execution live in the hosted

@@ -1,6 +1,6 @@
 # corpus
 
-Agent Plugins v1 package for [Corpus](https://corpuslaw.us): live US legal
+Plugin package for [Corpus](https://corpuslaw.us): live US legal
 research and business-formation handoff.
 
 The **content** (the two skills + the MCP URL) is vendor-neutral. Wrappers in
@@ -9,13 +9,13 @@ this directory:
 - Agent Plugins v1 (`plugin.json` + `mcp.json`) — Hermes
 - `.claude-plugin/plugin.json` — Claude Code
 - `.cursor-plugin/plugin.json` — Cursor / Grok Bot marketplace
+- `.codex-plugin/plugin.json` + `.mcp.json` — OpenAI Codex
 
-All three describe the same skills and the same hosted MCP URL; none generate
-or own the content. Codex/ChatGPT use a fourth folder shape and reuse the same
-URL.
+All four describe the same skills and the same hosted MCP URL; none generate
+or own the content.
 
-The two wrappers spell the MCP transport differently on purpose: Agent Plugins
-v1 uses `"type": "streamable-http"`, Claude Code uses `"type": "http"`. Same
+The wrappers spell the MCP transport differently on purpose: Agent Plugins
+v1 uses `"type": "streamable-http"`, Claude Code and Codex use `"type": "http"`. Same
 endpoint.
 
 Manifest `name` is `corpus`. Files under `skills/` are **generated copies** of
@@ -31,10 +31,24 @@ the canonical skill trees at the repo root (`SKILL.md` plus any
 | Hermes (Agent Plugins v1) | Yes | Yes |
 | Claude Code (`.claude-plugin/`) | Yes | Yes |
 | Grok Bot / Cursor | Yes (`.cursor-plugin/`) | Yes — marketplace package or add `https://corpuslaw.us/api/mcp` (see [docs/GROK_BOT.md](../../docs/GROK_BOT.md)) |
-| Codex / ChatGPT | No (own layout: `.codex-plugin/` + `.mcp.json`) | Yes — `codex mcp add corpus --url https://corpuslaw.us/api/mcp` |
+| OpenAI Codex | Yes (`.codex-plugin/` + `.mcp.json`) | Yes — hosted MCP plus both skills |
+| ChatGPT | No ChatGPT catalog listing claimed | Hosted MCP, where custom connectors are supported |
 | Any MCP-capable harness | No | Yes — same Streamable HTTP URL |
 
-A Codex folder-adapter is a later package, not this one. Cursor/Grok listing uses `.cursor-plugin/` in this directory.
+## Install (OpenAI Codex)
+
+From a local checkout of this repository:
+
+```bash
+codex plugin marketplace add /absolute/path/to/corpus-agent-kit
+codex plugin add corpus@corpus-agent-kit
+```
+
+The repository marketplace is `.agents/plugins/marketplace.json`. The OpenAI
+release archive includes only that marketplace and the Codex package files.
+See the [OpenAI package guide](../../docs/OPENAI_PLUGIN.md) for tagged builds,
+archive installation, and validation. No API key is required. Start a new Codex
+task after installation, confirm both skills load, and ask for `law.list_coverage`.
 
 ## Install (Claude Code)
 
