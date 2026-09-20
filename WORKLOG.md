@@ -137,3 +137,16 @@ Corrected the latter's stale eight-tool/public-disabled claims before landing;
 current public checkout documentation remains the ten-tool contract. Original
 session branches and worktrees are preserved. No release tag, package publication,
 paid request, flag change, or production deployment is part of this integration.
+
+Also integrated the older `chore/pin-qwen-flash-snapshot` branch: fast-lane
+model defaults to `qwen-flash-2025-07-28`, with environment overrides preserved.
+Alibaba's model documentation still identifies that snapshot as equivalent to
+`qwen-flash`: https://help.aliyun.com/zh/model-studio/qwen-flash (checked 2026-09-20).
+No inference request was made during this audit.
+
+Validation on the combined code: 39 autopilot + 6 bridge tests passed, all
+workspace typechecks/builds and plugin checks passed. OpenAI archive integrity
+passed; repeated builds of the same ref matched byte-for-byte. GitHub CI passed
+at `52d8397`. Older Cursor and Grok work is already present (with later copy
+corrections); initialize and canonical law.search fixes are already ancestors of
+main. Existing peer branches/checkouts remain untouched.
