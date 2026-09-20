@@ -87,3 +87,72 @@ Validation: 39 autopilot + 6 bridge tests, typechecks, builds, packaging and
 Hermes validate/doctor pass. Clean temporary Hermes home installed the pinned
 plugin over SSH after HTTPS timed out; runtime discovery/live call evidence is
 recorded with the Corpus release-readiness report. No paid transaction performed.
+
+## 2026-09-12 — agent-checkout rehearsal split (historical observation)
+
+Superseded by the ten-tool public checkout release recorded on 2026-09-19.
+The observations and next steps below describe September 12 only.
+
+### Verified live on corpuslaw.us (no deploy this session)
+- Public headerless `https://corpuslaw.us/api/mcp` still lists **8 tools**:
+  `law.search`, `law.get_node`, `law.list_coverage`, `account.status`,
+  `formation.requirements`, `formation.compare`, `formation.lookup_naics`,
+  `formation.handoff`.
+- `formation.checkout` / `formation.payment_status` exist on the server but are
+  gated: without `X-Corpus-Rehearsal`, `tools/call` returns
+  `agent_checkout_disabled` (**not** `Unknown tool`). Production flag = `rehearsal`.
+
+### Decisions
+- Rehearsal is a **private connector header** only: `X-Corpus-Rehearsal` with the
+  token stored in Vercel as `FORMATION_AGENT_CHECKOUT_REHEARSAL_TOKEN`. The token
+  is never written into this repo.
+- Marketplace / published plugin stays **headerless**: `plugins/corpus/mcp.json`
+  and `plugins/corpus/.cursor-plugin/plugin.json` remain URL-only (no
+  `Authorization`, no `X-Corpus-Rehearsal`). Both re-read and confirmed unchanged.
+- Public demo path unchanged — stops at the `formation.handoff` link. The two
+  checkout tools stay out of the public skill tool table until the public flag is on.
+- GATE 2 unchanged: never auto-file. Rehearsal covers spend, not filing.
+- **No USDC canary run and none claimed.**
+
+### Files changed
+- `docs/GROK_BOT.md` — 8-tool public install kept; new "Rehearsal connector (not
+  the marketplace plugin)" section; 2026-09-12 re-verification line
+- `plugins/corpus/README.md` — one sentence: marketplace MCP headerless on
+  purpose, rehearsal is a private connector header
+- `WORKLOG.md` — this entry
+
+### Not done (deliberately)
+- No deploy. No manifest/header edits. No `SKILL.md` formation-procedure change.
+- Env files remain absent by design.
+
+### Next
+- Flip the public flag (server-side) before the two checkout tools go into the
+  public skill tool table; re-verify the public tool list at that point.
+
+
+## 2026-09-20 — merge readiness audit
+
+Integrated the OpenAI plugin package and private rehearsal-header guidance.
+Corrected the latter's stale eight-tool/public-disabled claims before landing;
+current public checkout documentation remains the ten-tool contract. Original
+session branches and worktrees are preserved. No release tag, package publication,
+paid request, flag change, or production deployment is part of this integration.
+
+Also integrated the older `chore/pin-qwen-flash-snapshot` branch: fast-lane
+model defaults to `qwen-flash-2025-07-28`, with environment overrides preserved.
+Alibaba's model documentation still identifies that snapshot as equivalent to
+`qwen-flash`: https://help.aliyun.com/zh/model-studio/qwen-flash (checked 2026-09-20).
+No inference request was made during this audit.
+
+Validation on the combined code: 39 autopilot + 6 bridge tests passed, all
+workspace typechecks/builds and plugin checks passed. OpenAI archive integrity
+passed; repeated builds of the same ref matched byte-for-byte. GitHub CI passed
+at `52d8397`. Older Cursor and Grok work is already present (with later copy
+corrections); initialize and canonical law.search fixes are already ancestors of
+main. Existing peer branches/checkouts remain untouched.
+
+Greptile's PR review found two packaging gaps. Release tag validation now checks
+Git's resolved tag ref, including differently named tags; isolated repository
+tests cover invalid names/versions, a valid annotated tag, and byte stability
+despite working-tree edits (3 tests passed). CI now builds twice and compares
+archives. These fixes do not touch user tags or publish a release.

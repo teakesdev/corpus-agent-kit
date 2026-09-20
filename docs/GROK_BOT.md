@@ -28,6 +28,39 @@ Verified dry-run (2026-09-10): `formation.requirements` for MS LLC returns the
 live checklist and all-in pricing; `formation.handoff` returns **COMPLETE** and
 a prefilled approval link. Agents never auto-file (GATE 2 human approval). USDC pay is email-confirmed; filing still needs human approval. Sept 15 demo stops at the handoff link — USDC pay is optional.
 
+## Private rehearsal connector
+
+The public endpoint now lists ten tools, including `formation.checkout` and
+`formation.payment_status`. The eight-tool rehearsal-only state observed on
+2026-09-12 is historical; it is not the current public install contract.
+
+If a deployment is explicitly configured in rehearsal mode, its checkout tools
+require a private connector header. This is a deployment-specific testing setup,
+not a prerequisite for the public marketplace plugin.
+
+To rehearse agent checkout, add the header on a **private** Grok Bot connector
+only:
+
+```
+X-Corpus-Rehearsal: <token>
+```
+
+The token is stored in Vercel as `FORMATION_AGENT_CHECKOUT_REHEARSAL_TOKEN`.
+Never write it into this repo, a bot template, or a marketplace manifest.
+
+Rules:
+
+- The marketplace / published plugin stays **headerless**:
+  `plugins/corpus/mcp.json` and `plugins/corpus/.cursor-plugin/plugin.json` are
+  URL-only — no `Authorization`, no `X-Corpus-Rehearsal`.
+- If the checkout tools are missing, or a call returns `agent_checkout_disabled`,
+  **stop** and use the `formation.handoff` approval link. Do not invent a payment
+  step or a pay tool id.
+- GATE 2 is unchanged: never auto-file. Rehearsal covers spend, not filing.
+- A handoff creates no order or payment request. Public checkout requires
+  the founder to confirm the exact amount in the current turn; filing still
+  requires separate human approval.
+
 ## Install skills (optional, richer intake)
 
 Copy from this repo into your Grok Bot / Cursor skills library:
