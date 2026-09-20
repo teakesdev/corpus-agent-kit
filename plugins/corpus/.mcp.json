@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "corpus": {
+      "type": "http",
+      "url": "https://corpuslaw.us/api/mcp"
+    }
+  }
+}

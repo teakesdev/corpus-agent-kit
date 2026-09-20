@@ -20,3 +20,8 @@ jobs:
       - run: npm run build
       - run: npm pack --workspace mcp-server --dry-run
       - run: node scripts/check-plugin-package.mjs
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: python3 scripts/package-openai-plugin.py HEAD
+      - run: unzip -t dist/corpus-openai-*.zip

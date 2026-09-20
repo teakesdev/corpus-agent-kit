@@ -1,0 +1,30 @@
+{
+  "name": "corpus",
+  "version": "0.1.0",
+  "description": "US legal research and LLC or nonprofit formation intake, with cited law and human-approved filing.",
+  "author": {
+    "name": "Corpus",
+    "url": "https://corpuslaw.us"
+  },
+  "homepage": "https://corpuslaw.us",
+  "repository": "https://github.com/teakesdev/corpus-agent-kit",
+  "license": "Apache-2.0",
+  "keywords": ["legal", "law", "formation", "llc", "nonprofit", "mcp"],
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "Corpus",
+    "shortDescription": "Research US law and prepare a business formation.",
+    "longDescription": "Search and cite US law, or work through LLC and nonprofit formation intake. Includes two skills and the hosted Corpus MCP connector. Filing requires human approval; creating a payment request requires the founder's explicit consent.",
+    "developerName": "Corpus",
+    "category": "Productivity",
+    "capabilities": [],
+    "websiteURL": "https://corpuslaw.us",
+    "logo": "./assets/logo.png",
+    "defaultPrompt": [
+      "What does Mississippi require to form an LLC?",
+      "Find the law and cite the official text.",
+      "Help me prepare a nonprofit formation intake."
+    ]
+  },
+  "mcpServers": "./.mcp.json"
+}

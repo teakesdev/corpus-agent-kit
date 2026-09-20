@@ -27,10 +27,14 @@ claude mcp add --transport http corpus https://corpuslaw.us/api/mcp
 # OpenAI Codex  (experimental_use_rmcp_client is NO LONGER required)
 codex mcp add corpus --url https://corpuslaw.us/api/mcp
 
-# Hermes        (interactive; answer "no" when asked if it needs auth)
+# Hermes standalone server (interactive; answer "no" when asked if it needs auth)
 hermes mcp add corpus --url "https://corpuslaw.us/api/mcp"
 hermes mcp test corpus
 ```
+
+`hermes mcp test corpus` applies only to the standalone server added above.
+For the installed Hermes plugin, use `hermes plugins doctor corpus --ci`, then
+start a fresh chat and ask for `law.list_coverage`; plugin MCP IDs are namespaced.
 
 ## Config files
 
