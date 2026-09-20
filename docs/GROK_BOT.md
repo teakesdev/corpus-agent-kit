@@ -28,15 +28,15 @@ Verified dry-run (2026-09-10): `formation.requirements` for MS LLC returns the
 live checklist and all-in pricing; `formation.handoff` returns **COMPLETE** and
 a prefilled approval link. Agents never auto-file (GATE 2 human approval). USDC pay is email-confirmed; filing still needs human approval. Sept 15 demo stops at the handoff link — USDC pay is optional.
 
-Re-verified (2026-09-12): the public headerless endpoint still lists the same
-eight tools.
+## Private rehearsal connector
 
-## Rehearsal connector (not the marketplace plugin)
+The public endpoint now lists ten tools, including `formation.checkout` and
+`formation.payment_status`. The eight-tool rehearsal-only state observed on
+2026-09-12 is historical; it is not the current public install contract.
 
-`formation.checkout` and `formation.payment_status` exist on the hosted server
-but are gated. They do **not** appear in the public headerless tool list, and a
-`tools/call` without the rehearsal header returns `agent_checkout_disabled` —
-not `Unknown tool`. Production runs the flag at `rehearsal`.
+If a deployment is explicitly configured in rehearsal mode, its checkout tools
+require a private connector header. This is a deployment-specific testing setup,
+not a prerequisite for the public marketplace plugin.
 
 To rehearse agent checkout, add the header on a **private** Grok Bot connector
 only:
@@ -57,8 +57,9 @@ Rules:
   **stop** and use the `formation.handoff` approval link. Do not invent a payment
   step or a pay tool id.
 - GATE 2 is unchanged: never auto-file. Rehearsal covers spend, not filing.
-- The public demo path still stops at the handoff link, and the two checkout
-  tools stay out of the public skill tool table until the public flag is on.
+- A handoff creates no order or payment request. Public checkout requires
+  the founder to confirm the exact amount in the current turn; filing still
+  requires separate human approval.
 
 ## Install skills (optional, richer intake)
 

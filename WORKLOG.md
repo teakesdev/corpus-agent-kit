@@ -88,7 +88,10 @@ Hermes validate/doctor pass. Clean temporary Hermes home installed the pinned
 plugin over SSH after HTTPS timed out; runtime discovery/live call evidence is
 recorded with the Corpus release-readiness report. No paid transaction performed.
 
-## 2026-09-12 — agent-checkout rehearsal split (docs only)
+## 2026-09-12 — agent-checkout rehearsal split (historical observation)
+
+Superseded by the ten-tool public checkout release recorded on 2026-09-19.
+The observations and next steps below describe September 12 only.
 
 ### Verified live on corpuslaw.us (no deploy this session)
 - Public headerless `https://corpuslaw.us/api/mcp` still lists **8 tools**:
@@ -125,3 +128,12 @@ recorded with the Corpus release-readiness report. No paid transaction performed
 ### Next
 - Flip the public flag (server-side) before the two checkout tools go into the
   public skill tool table; re-verify the public tool list at that point.
+
+
+## 2026-09-20 — merge readiness audit
+
+Integrated the OpenAI plugin package and private rehearsal-header guidance.
+Corrected the latter's stale eight-tool/public-disabled claims before landing;
+current public checkout documentation remains the ten-tool contract. Original
+session branches and worktrees are preserved. No release tag, package publication,
+paid request, flag change, or production deployment is part of this integration.
