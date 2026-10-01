@@ -18,10 +18,10 @@ ROOT = Path(__file__).resolve().parent.parent
 # Explicit inputs: never archive the whole checkout or copy local configuration.
 INPUTS = (
     ".agents/plugins/marketplace.json",
-    "plugins/corpus/.codex-plugin/plugin.json",
-    "plugins/corpus/.mcp.json",
-    "plugins/corpus/skills",
-    "plugins/corpus/assets",
+    "plugins/corpus-openai/.codex-plugin/plugin.json",
+    "plugins/corpus-openai/.mcp.json",
+    "plugins/corpus-openai/skills",
+    "plugins/corpus-openai/assets",
     "docs/OPENAI_PLUGIN.md",
     "LICENSE",
 )
@@ -50,7 +50,7 @@ def validate_submission(manifest, files):
         path = PurePosixPath(value)
         if not value.startswith("./") or path.is_absolute() or ".." in path.parts:
             raise ValueError(f"{field} must be a ./-prefixed package asset path")
-        data = files.get("plugins/corpus/" + value[2:], b"")
+        data = files.get("plugins/corpus-openai/" + value[2:], b"")
         # Corpus uses PNG assets. Reject missing/truncated/non-PNG files rather
         # than silently treating an arbitrary payload as a valid icon.
         if len(data) < 33 or data[:8] != b"\x89PNG\r\n\x1a\n" or data[12:16] != b"IHDR":
@@ -89,16 +89,16 @@ def build(ref, output_dir, layout="marketplace"):
             if not member.isfile() or path.is_absolute() or ".." in path.parts:
                 raise ValueError(f"Unsafe archive member: {member.name}")
             if member.name not in INPUTS and not (
-                member.name.startswith("plugins/corpus/skills/")
+                member.name.startswith("plugins/corpus-openai/skills/")
                 and (path.name == "SKILL.md" or "references" in path.parts)
                 and path.name != ".DS_Store"
             ) and member.name not in (
-                "plugins/corpus/assets/logo.png", "plugins/corpus/assets/corpus-icon.png"
+                "plugins/corpus-openai/assets/logo.png", "plugins/corpus-openai/assets/corpus-icon.png"
             ):
                 raise ValueError(f"Unexpected package file: {member.name}")
             files[member.name] = archive.extractfile(member).read()
 
-    manifest = json.loads(files["plugins/corpus/.codex-plugin/plugin.json"])
+    manifest = json.loads(files["plugins/corpus-openai/.codex-plugin/plugin.json"])
     version = manifest["version"]
     if not re.fullmatch(r"[0-9]+\.[0-9]+\.[0-9]+", version):
         raise ValueError("Release version must be major.minor.patch")
@@ -107,12 +107,12 @@ def build(ref, output_dir, layout="marketplace"):
     if resolved_ref.startswith("refs/tags/") and tag != f"corpus-openai-v{version}":
         raise ValueError("Release tag does not match the OpenAI manifest version")
     for name in ("corpus-business-formation", "corpus-legal-research"):
-        if f"plugins/corpus/skills/{name}/SKILL.md" not in files:
+        if f"plugins/corpus-openai/skills/{name}/SKILL.md" not in files:
             raise ValueError(f"Missing skill: {name}")
     if layout == "directory":
         validate_submission(manifest, files)
         files = {
-            (name.removeprefix("plugins/corpus/") if name.startswith("plugins/corpus/") else name): content
+            (name.removeprefix("plugins/corpus-openai/") if name.startswith("plugins/corpus-openai/") else name): content
             for name, content in files.items()
             if name != ".agents/plugins/marketplace.json"
         }
@@ -130,7 +130,7 @@ def build(ref, output_dir, layout="marketplace"):
     # Fixed metadata and no compression make bytes independent of clock and zlib.
     with zipfile.ZipFile(destination, "w", compression=zipfile.ZIP_STORED) as archive:
         for name, content in sorted(files.items()):
-            info = zipfile.ZipInfo(f"{stem}/{name}", date_time=(1980, 1, 1, 0, 0, 0))
+            info = zipfile.ZipInfo(name if layout == "directory" else f"{stem}/{name}", date_time=(1980, 1, 1, 0, 0, 0))
             info.create_system = 3
             info.external_attr = 0o100644 << 16
             archive.writestr(info, content)

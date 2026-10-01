@@ -2,7 +2,7 @@
   "mcpServers": {
     "corpus": {
       "type": "http",
-      "url": "https://corpuslaw.us/api/mcp"
+      "url": "https://corpuslaw.us/api/mcp/openai"
     }
   }
 }

@@ -182,3 +182,7 @@ the manifest truthfully declares commerce instead of disguising it. Full evidenc
 remaining decisions and domain-verification steps are in `docs/openai-submission/`.
 No portal action, account creation, identity verification, attestation, payment,
 production deployment, push, merge or release publication is authorized or done.
+
+## 2026-10-01 — Informational OpenAI package (supersedes 0.1.1)
+
+User-approved separate OpenAI package at plugins/corpus-openai: independent endpoint and skills, no service commerce. Old compatibility files moved out of the shared portable package so its automatic MCP/skills discovery cannot override the informational scope. Directory archive has a literal plugin root, no outer folder. Other client manifests/skills unchanged. Backend deployment and client checks remain pending.

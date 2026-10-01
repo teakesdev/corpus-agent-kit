@@ -22,9 +22,9 @@ class PackageTest(unittest.TestCase):
         self.addCleanup(setattr, package, "ROOT", original_root)
         package.ROOT = self.root
         source_root = Path(__file__).parents[2]
-        self.manifest = json.loads((source_root / "plugins/corpus/.codex-plugin/plugin.json").read_text())
+        self.manifest = json.loads((source_root / "plugins/corpus-openai/.codex-plugin/plugin.json").read_text())
         self.manifest["version"] = "0.1.0"
-        self.icon = (source_root / "plugins/corpus/assets/corpus-icon.png").read_bytes()
+        self.icon = (source_root / "plugins/corpus-openai/assets/corpus-icon.png").read_bytes()
         self.git("init", "-q")
         self.git("config", "user.name", "Test")
         self.git("config", "user.email", "test@example.invalid")
@@ -74,16 +74,16 @@ class PackageTest(unittest.TestCase):
         package.build("HEAD", self.root / "out", "directory")
         with zipfile.ZipFile(self.root / "out/corpus-openai-0.1.0-submission.zip") as archive:
             names = archive.namelist()
-            prefix = "corpus-openai-0.1.0-submission/"
+            prefix = ""
             self.assertIn(prefix + ".codex-plugin/plugin.json", names)
             self.assertIn(prefix + ".mcp.json", names)
             self.assertIn(prefix + "assets/corpus-icon.png", names)
             self.assertNotIn(prefix + ".agents/plugins/marketplace.json", names)
-            self.assertFalse(any("plugins/corpus/" in n for n in names))
+            self.assertFalse(any("plugins/corpus-openai/" in n for n in names))
 
     def validate(self, manifest=None, icon=None):
         package.validate_submission(manifest or self.manifest, {
-            "plugins/corpus/assets/corpus-icon.png": self.icon if icon is None else icon,
+            "plugins/corpus-openai/assets/corpus-icon.png": self.icon if icon is None else icon,
         })
 
     def test_rejects_missing_policy_urls_and_oversized_subtitle(self):

@@ -23,15 +23,16 @@ for (const [folder, transport] of [['.claude-plugin', 'http'], ['.cursor-plugin'
 for (const name of ['corpus-business-formation', 'corpus-legal-research']) {
   assert.ok(existsSync(root + 'skills/' + name + '/SKILL.md'));
 }
-const openai = read(root + '.codex-plugin/plugin.json');
+const openaiRoot = 'plugins/corpus-openai/';
+const openai = read(openaiRoot + '.codex-plugin/plugin.json');
 assert.equal(openai.name, portable.name);
 assert.match(openai.version, /^\d+\.\d+\.\d+$/);
 assert.equal(openai.skills, './skills/');
 assert.equal(openai.mcpServers, './.mcp.json');
-assert.deepEqual(read(root + '.mcp.json'), {
-  mcpServers: { corpus: { type: 'http', url } },
+assert.deepEqual(read(openaiRoot + '.mcp.json'), {
+  mcpServers: { corpus: { type: 'http', url: url + '/openai' } },
 }, 'OpenAI MCP must use HTTP and stay headerless');
-assert.ok(existsSync(root + openai.interface.logo));
+assert.ok(existsSync(openaiRoot + openai.interface.logo));
 for (const [field, limit] of [['displayName', 30], ['shortDescription', 30], ['longDescription', 4000], ['developerName', 80]]) {
   assert.equal(typeof openai.interface[field], 'string');
   assert.ok(openai.interface[field].trim() && openai.interface[field].length <= limit, `${field} exceeds submission limit`);
@@ -44,7 +45,7 @@ for (const field of ['websiteURL', 'supportURL', 'privacyPolicyURL', 'termsOfSer
 for (const field of ['logo', 'composerIcon']) {
   const path = openai.interface[field];
   assert.ok(path.startsWith('./') && !path.split('/').includes('..'), `${field} must stay inside the plugin`);
-  const icon = readFileSync(resolve(root, path));
+  const icon = readFileSync(resolve(openaiRoot, path));
   assert.equal(icon.subarray(0, 8).toString('hex'), '89504e470d0a1a0a');
   assert.equal(icon.subarray(12, 16).toString(), 'IHDR');
   assert.equal(icon.readUInt32BE(16), icon.readUInt32BE(20), `${field} must be square`);
@@ -59,9 +60,12 @@ const openaiMarket = read('.agents/plugins/marketplace.json');
 assert.equal(openaiMarket.name, 'corpus-agent-kit');
 assert.deepEqual(openaiMarket.plugins, [{
   name: 'corpus',
-  source: { source: 'local', path: './plugins/corpus' },
+  source: { source: 'local', path: './plugins/corpus-openai' },
   policy: { installation: 'AVAILABLE', authentication: 'ON_INSTALL' },
   category: 'Productivity',
 }]);
 assert.ok(existsSync(root + 'skills/corpus-business-formation/references/intake.md'));
 console.log('Plugin manifests, transports, marketplace entries, skills and assets agree.');
+
+assert.equal(openai.extensions['com.openai'].review.commerce, false);
+for (const name of ['corpus-business-formation', 'corpus-legal-research']) assert.ok(existsSync(openaiRoot + 'skills/' + name + '/SKILL.md'));

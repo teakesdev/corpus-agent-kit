@@ -12,7 +12,7 @@ spec.loader.exec_module(smoke)
 class SmokeSafetyTest(unittest.TestCase):
     def test_payment_account_and_unknown_tools_fail_before_network(self):
         with patch.object(smoke.urllib.request, "urlopen") as network:
-            for name in ("formation.checkout", "formation.payment_status", "account.status", "shell"):
+            for name in ("formation.checkout", "formation.payment_status", "account.status", "formation.handoff", "formation_checkout", "shell"):
                 with self.subTest(name=name), self.assertRaisesRegex(ValueError, "read-only"):
                     smoke.call(name, {})
             network.assert_not_called()
