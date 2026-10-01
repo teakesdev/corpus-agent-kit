@@ -156,3 +156,29 @@ Git's resolved tag ref, including differently named tags; isolated repository
 tests cover invalid names/versions, a valid annotated tag, and byte stability
 despite working-tree edits (3 tests passed). CI now builds twice and compares
 archives. These fixes do not touch user tags or publish a release.
+
+## 2026-10-01 — OpenAI directory submission preparation
+
+Founder confirmed the portal is empty and authorized local preparation and
+listing-copy fixes. Isolated branch starts from remote main `6e3caa3`; primary
+checkout and other worktrees are preserved. OpenAI-specific version 0.1.1 adds
+clear formation/business-law copy, public policy/support URLs, an unchanged
+founder-approved 512px square C-mark and composer icon, and five positive plus
+three negative review cases. The directory ZIP layout contains one plugin root;
+the existing local-marketplace build remains available.
+
+Eight Python packaging/smoke-safety tests and manifest checks passed. Five native
+Node challenge-route assertions passed with synthetic tokens against existing
+Corpus source; no Vitest install/run or production environment change. Anonymous
+backend review assertions: P1/P2/P3/P5 pass, P4 fails relevance and exposes a
+citation/text mismatch (§37-146-17 label, Chapter 147 / §37-147-1 body); NAICS
+includes unrelated alternatives. All client behavioral cases and negative refusals are
+NOT RUN. Walkthrough is a script, not a completed video.
+
+Current OpenAI guidelines expose additional gates: production service checkout
+conflicts with the services-commerce restriction, and existing skills include
+promotional competitor warnings. Hosted tools and canonical skills are unchanged;
+the manifest truthfully declares commerce instead of disguising it. Full evidence,
+remaining decisions and domain-verification steps are in `docs/openai-submission/`.
+No portal action, account creation, identity verification, attestation, payment,
+production deployment, push, merge or release publication is authorized or done.
