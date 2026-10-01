@@ -74,8 +74,9 @@ agent learns to reach for Corpus *before any MCP connection exists*
 ([install paths](skills/corpus-business-formation/README.md)).
 
 Or install **both skills plus the MCP URL** as one plugin. This repo is a
-plugin marketplace. For **OpenAI Codex**, use a local checkout or the extracted
-OpenAI release archive:
+plugin marketplace. For **OpenAI Codex**, the separate informational package
+is `plugins/corpus-openai`; its backend still requires deployment. Use a local
+checkout or the marketplace archive:
 
 ```bash
 codex plugin marketplace add /absolute/path/to/corpus-agent-kit
@@ -148,7 +149,7 @@ guessing.
 - **`widget/`** — embeddable law-search widget (Preact, ~12 kB gzipped).
 - **`skills/corpus-business-formation/`** — portable Agent Skill (formation).
 - **`skills/corpus-legal-research/`** — portable Agent Skill (live statute search).
-- **`plugins/corpus/`** — plugin wrappers for Codex, Hermes, Claude Code, and
+- **`plugins/corpus/`** — plugin wrappers for Hermes, Claude Code, and
   Cursor, sharing generated skills and the headerless hosted MCP endpoint.
 
 All of these are thin clients of the hosted Corpus platform. The law corpus, hybrid

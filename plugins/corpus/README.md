@@ -9,13 +9,13 @@ this directory:
 - Agent Plugins v1 (`plugin.json` + `mcp.json`) — Hermes
 - `.claude-plugin/plugin.json` — Claude Code
 - `.cursor-plugin/plugin.json` — Cursor / Grok Bot marketplace
-- `.codex-plugin/plugin.json` + `.mcp.json` — OpenAI Codex
+- OpenAI uses the separate informational [`../corpus-openai/`](../corpus-openai/) package.
 
-All four describe the same skills and the same hosted MCP URL; none generate
+The three portable/client wrappers describe the same skills and hosted MCP URL; none generate
 or own the content.
 
 The wrappers spell the MCP transport differently on purpose: Agent Plugins
-v1 uses `"type": "streamable-http"`, Claude Code and Codex use `"type": "http"`. Same
+v1 uses `"type": "streamable-http"`, Claude Code uses `"type": "http"`. Same
 endpoint.
 
 Manifest `name` is `corpus`. Files under `skills/` are **generated copies** of
@@ -31,7 +31,7 @@ the canonical skill trees at the repo root (`SKILL.md` plus any
 | Hermes (Agent Plugins v1) | Yes | Yes |
 | Claude Code (`.claude-plugin/`) | Yes | Yes |
 | Grok Bot / Cursor | Yes (`.cursor-plugin/`) | Yes — marketplace package or add `https://corpuslaw.us/api/mcp` (see [docs/GROK_BOT.md](../../docs/GROK_BOT.md)) |
-| OpenAI Codex | Yes (`.codex-plugin/` + `.mcp.json`) | Yes — hosted MCP plus both skills |
+| OpenAI Codex | Separate `plugins/corpus-openai` package | Informational endpoint and separate skills; backend deployment pending |
 | ChatGPT | No ChatGPT catalog listing claimed | Hosted MCP, where custom connectors are supported |
 | Any MCP-capable harness | No | Yes — same Streamable HTTP URL |
 
@@ -44,11 +44,7 @@ codex plugin marketplace add /absolute/path/to/corpus-agent-kit
 codex plugin add corpus@corpus-agent-kit
 ```
 
-The repository marketplace is `.agents/plugins/marketplace.json`. The OpenAI
-release archive includes only that marketplace and the Codex package files.
-See the [OpenAI package guide](../../docs/OPENAI_PLUGIN.md) for tagged builds,
-archive installation, and validation. No API key is required. Start a new Codex
-task after installation, confirm both skills load, and ask for `law.list_coverage`.
+The repository marketplace points to the separate informational OpenAI package at plugins/corpus-openai. The portal ZIP places that package at its literal archive root; the marketplace archive retains repository paths. See the [OpenAI package guide](../../docs/OPENAI_PLUGIN.md). Its backend is not yet deployed, so connection and client validation remain pending. No API key is required by the informational route.
 
 ## Install (Claude Code)
 
