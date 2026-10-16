@@ -32,6 +32,7 @@ the canonical skill trees at the repo root (`SKILL.md` plus any
 | Claude Code (`.claude-plugin/`) | Yes | Yes |
 | Grok Bot / Cursor | Yes (`.cursor-plugin/`) | Yes — marketplace package or add `https://corpuslaw.us/api/mcp` (see [docs/GROK_BOT.md](../../docs/GROK_BOT.md)) |
 | OpenAI Codex | Yes (`.codex-plugin/` + `.mcp.json`) | Yes — hosted MCP plus both skills |
+| Qwen Code / Gemini CLI / Kimi Code | Yes — the repo root (`qwen-extension.json`, `gemini-extension.json`, `kimi.plugin.json`) | Yes — root `skills/` + `CORPUS.md` context |
 | ChatGPT | No ChatGPT catalog listing claimed | Hosted MCP, where custom connectors are supported |
 | Any MCP-capable harness | No | Yes — same Streamable HTTP URL |
 

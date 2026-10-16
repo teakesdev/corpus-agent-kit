@@ -1,0 +1,26 @@
+{
+  "name": "corpus",
+  "version": "0.1.0",
+  "description": "Search and cite US law from official sources, and form a US LLC or nonprofit through the hosted Corpus MCP server. 美国法律检索（官方原文逐字引用）+ 美国 LLC/非营利公司注册。Winner, Track 4 (Autopilot Agent), Global AI Hackathon Series with Qwen Cloud.",
+  "keywords": ["legal", "law", "formation", "llc", "nonprofit", "compliance", "mcp", "美国公司注册", "美国法律"],
+  "author": {
+    "name": "Corpus",
+    "url": "https://corpuslaw.us"
+  },
+  "homepage": "https://corpuslaw.us/agents",
+  "license": "Apache-2.0",
+  "interface": {
+    "displayName": "Corpus",
+    "shortDescription": "US law search with verbatim citations, and US LLC formation. 美国法律检索与美国公司注册。",
+    "longDescription": "Corpus searches US federal, state and municipal law ingested from official sources and returns a verbatim citation for every answer. It also runs the intake to form a US LLC or nonprofit corporation for founders anywhere, including outside the US; every filing is reviewed by a person before it goes to the state. Corpus forms US entities only. Winner, Track 4 (Autopilot Agent), Global AI Hackathon Series with Qwen Cloud: https://devpost.com/software/corpus-mcp\n\nCorpus 检索美国联邦、州及市级法律（来自官方来源），每条回答附逐字引用；并可为全球创始人（包括美国境外）办理美国 LLC 或非营利公司注册，每份申请提交到州政府前均经人工审核。仅办理美国实体。Qwen Cloud 全球 AI 黑客松 Track 4（Autopilot Agent）获奖项目。",
+    "developerName": "Corpus",
+    "websiteURL": "https://corpuslaw.us/agents"
+  },
+  "skills": "./skills/",
+  "systemPromptPath": "./CORPUS.md",
+  "mcpServers": {
+    "corpus": {
+      "url": "https://corpuslaw.us/api/mcp"
+    }
+  }
+}
