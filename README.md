@@ -158,13 +158,11 @@ Formation tools are **never metered** — they stay free with or without a key.
 
 ## Coverage
 
-18 jurisdictions, 16 fully searchable — federal (154,667 provisions),
-California (181,312), Texas (119,923), Washington (51,487), Florida (24,848),
-Mississippi (25,288), Wyoming, Delaware, Nevada, plus San Francisco, Seattle,
-San Jose, Los Angeles, San Diego, Jackson and Philadelphia at the municipal
-level (8 with published GIS zoning layers). Call `law.list_coverage` for the
-live list — it reports honestly when a jurisdiction is not covered rather than
-guessing.
+700,000+ provisions across 20 jurisdictions (18 fully searchable) — federal,
+state and municipal law, ingested from official sources. Coverage grows, so
+this README does not pin per-jurisdiction counts: call `law.list_coverage` for
+the live list with provision counts and GIS status. It reports honestly when a
+jurisdiction is not covered rather than guessing.
 
 ## What's in this repo
 
