@@ -5,11 +5,11 @@
 **Give your AI agent real US law — and let it form a company.**
 
 Open-source connectors for the [Corpus legal platform](https://corpuslaw.us):
-search 571,582 provisions of federal, state, and municipal law with verbatim
+search 700,000+ provisions of federal, state, and municipal law with verbatim
 citations, and run a complete LLC or nonprofit formation intake end to end.
 Every filing still stops at a human approval gate.
 
-[![Winner — Qwen Cloud Hackathon, Track 4](https://img.shields.io/badge/Winner-Qwen%20Cloud%20Hackathon%20·%20Track%204-6f42c1)](https://qwencloud-hackathon.devpost.com/)
+[![Winner — Qwen Cloud Hackathon, Track 4](https://img.shields.io/badge/Winner-Qwen%20Cloud%20Hackathon%20·%20Track%204-6f42c1)](https://devpost.com/software/corpus-mcp)
 [![License](https://img.shields.io/badge/license-Apache--2.0-blue)](LICENSE)
 [![smithery badge](https://smithery.ai/badge/renaissanceaisolutions/corpus-legal)](https://smithery.ai/servers/renaissanceaisolutions/corpus-legal)
 
@@ -105,6 +105,34 @@ hermes plugins doctor corpus --ci
 Portable packages install **disabled** in Hermes; enable is a separate consent
 step.
 
+**Qwen Code**, **Gemini CLI** and **Kimi Code** install the repository itself
+(`qwen-extension.json`, `gemini-extension.json` and `kimi.plugin.json` at the
+root load both skills, the hosted MCP URL and the [`CORPUS.md`](CORPUS.md)
+context):
+
+```bash
+qwen extensions install https://github.com/teakesdev/corpus-agent-kit:corpus
+gemini extensions install https://github.com/teakesdev/corpus-agent-kit
+```
+
+(The `:corpus` suffix picks the plugin without a prompt; Qwen Code also reads
+this repo as a Claude Code marketplace.) In Kimi Code:
+`/plugins install https://github.com/teakesdev/corpus-agent-kit`, then `/reload`.
+
+### 中文：给身在中国的创业者和开发者
+
+Corpus 提供美国联邦、州及市级法律检索（来自官方来源，每条结果附逐字引用），并可为身在美国境外的创业者办理美国
+LLC 或非营利公司注册。**仅办理美国实体**，不办理中国境内公司。本项目（Corpus Formation Autopilot / Corpus Agent Kit）获得
+Global AI Hackathon Series with Qwen Cloud（通义千问）Track 4（Autopilot Agent）赛道奖项，
+[在 Devpost 查看](https://devpost.com/software/corpus-mcp)。
+
+- **接入方式：** 任何支持 MCP 的客户端，填入 `https://corpuslaw.us/api/mcp`（Streamable HTTP，无需 API 密钥即可开始）；
+  Qwen Code / Gemini CLI / Kimi Code 用上面的一条命令安装。
+- **能做：** 法律检索与引用；向州政府提交 LLC 注册（全美 50 个州及华盛顿特区），含第一年注册代理服务，每份文件提交前都有专人审核。
+- **暂不能做：** 代办 EIN、接受美国境外的主要办公地址（目前需要美国街道地址）、开设银行账户、准备 Form 5472 或其他报税文件、提供法律或税务建议。
+  网站与付款页面为英文，支付方式为银行卡。
+- **中文指南：** [在中国可以注册美国 LLC 吗？](https://corpuslaw.us/guides/form-a-us-llc-from-china/zh)
+
 ### 4. Run it yourself
 
 Clone and build — see [Quickstart](#quickstart) below.
@@ -115,7 +143,7 @@ Clone and build — see [Quickstart](#quickstart) below.
 
 | Tool | What it does |
 |---|---|
-| `law.search` | Hybrid semantic + keyword search over 571,582 provisions |
+| `law.search` | Hybrid semantic + keyword search over 700,000+ provisions |
 | `law.get_node` | Full official text of one provision |
 | `law.list_coverage` | Which jurisdictions are indexed, and how deeply |
 | `formation.requirements` | A state's exact field checklist, quirks, live pricing |
@@ -130,13 +158,11 @@ Formation tools are **never metered** — they stay free with or without a key.
 
 ## Coverage
 
-18 jurisdictions, 16 fully searchable — federal (154,667 provisions),
-California (181,312), Texas (119,923), Washington (51,487), Florida (24,848),
-Mississippi (25,288), Wyoming, Delaware, Nevada, plus San Francisco, Seattle,
-San Jose, Los Angeles, San Diego, Jackson and Philadelphia at the municipal
-level (8 with published GIS zoning layers). Call `law.list_coverage` for the
-live list — it reports honestly when a jurisdiction is not covered rather than
-guessing.
+700,000+ provisions across 20 jurisdictions (18 fully searchable) — federal,
+state and municipal law, ingested from official sources. Coverage grows, so
+this README does not pin per-jurisdiction counts: call `law.list_coverage` for
+the live list with provision counts and GIS status. It reports honestly when a
+jurisdiction is not covered rather than guessing.
 
 ## What's in this repo
 
@@ -169,7 +195,7 @@ See [docs/architecture.md](docs/architecture.md) for the Mermaid source.
 | Two-lane Qwen routing | ✅ `autopilot/src/` | — |
 | MCP stdio bridge (`corpus-mcp`) | ✅ `mcp-server/` | — |
 | Embeddable widget | ✅ `widget/` | — |
-| Law database (571,582 provisions, Aurora) | — | ✅ |
+| Law database (700,000+ provisions, Aurora) | — | ✅ |
 | Hybrid search engine + `/api/mcp` | — | ✅ |
 | `/formation` checkout + GATE 2 | — | ✅ |
 | Stripe payment + state filing execution | — | ✅ |

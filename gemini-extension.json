@@ -1,0 +1,11 @@
+{
+  "name": "corpus",
+  "version": "0.1.0",
+  "description": "Search and cite US law from official sources, and form a US LLC or nonprofit through the hosted Corpus MCP server. 美国法律检索（官方原文逐字引用）+ 美国 LLC/非营利公司注册。Winner, Track 4 (Autopilot Agent), Global AI Hackathon Series with Qwen Cloud.",
+  "contextFileName": "CORPUS.md",
+  "mcpServers": {
+    "corpus": {
+      "httpUrl": "https://corpuslaw.us/api/mcp"
+    }
+  }
+}

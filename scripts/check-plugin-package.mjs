@@ -40,4 +40,23 @@ assert.deepEqual(openaiMarket.plugins, [{
   category: 'Productivity',
 }]);
 assert.ok(existsSync(root + 'skills/corpus-business-formation/references/intake.md'));
+
+// Repo-root extension manifests: `gemini extensions install`, `qwen extensions install`
+// and Kimi Code `/plugins install` all take the repository URL, so these live at the
+// root and load the canonical skills/ tree. Gemini and Qwen spell Streamable HTTP as
+// `httpUrl` (their `url` means SSE, which Corpus does not serve); Kimi spells it `url`.
+for (const [file, key] of [['gemini-extension.json', 'httpUrl'], ['qwen-extension.json', 'httpUrl'], ['kimi.plugin.json', 'url']]) {
+  const ext = read(file);
+  assert.equal(ext.name, portable.name, file + ' name');
+  assert.match(ext.name, /^[a-z0-9][a-z0-9_-]{0,63}$/, file + ' name');
+  assert.equal(ext.version, portable.version, file + ' version');
+  assert.deepEqual(ext.mcpServers, { corpus: { [key]: url } }, file + ' must be headerless Streamable HTTP');
+  assert.ok(ext.description.includes('Qwen Cloud'), file + ' must name the hackathon win');
+  const context = ext.contextFileName ?? ext.systemPromptPath?.replace(/^\.\//, '');
+  assert.ok(context && existsSync(context), file + ' context file');
+}
+assert.equal(read('kimi.plugin.json').skills, './skills/');
+for (const name of ['corpus-business-formation', 'corpus-legal-research']) {
+  assert.ok(existsSync('skills/' + name + '/SKILL.md'));
+}
 console.log('Plugin manifests, transports, marketplace entries, skills and assets agree.');

@@ -1,6 +1,6 @@
 # @corpuslaw/mcp-server
 
-MCP server giving any AI agent **571,582 provisions of US federal, state and
+MCP server giving any AI agent **700,000+ provisions of US federal, state and
 municipal law** with verbatim citations — plus a complete LLC / nonprofit
 formation intake.
 
