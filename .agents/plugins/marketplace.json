@@ -8,7 +8,7 @@
       "name": "corpus",
       "source": {
         "source": "local",
-        "path": "./plugins/corpus"
+        "path": "./plugins/corpus-codex"
       },
       "policy": {
         "installation": "AVAILABLE",

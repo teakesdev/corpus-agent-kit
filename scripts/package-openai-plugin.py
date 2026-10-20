@@ -16,10 +16,10 @@ ROOT = Path(__file__).resolve().parent.parent
 # Explicit inputs: never archive the whole checkout or copy local configuration.
 INPUTS = (
     ".agents/plugins/marketplace.json",
-    "plugins/corpus/.codex-plugin/plugin.json",
-    "plugins/corpus/.mcp.json",
-    "plugins/corpus/skills",
-    "plugins/corpus/assets/logo.png",
+    "plugins/corpus-codex/.codex-plugin/plugin.json",
+    "plugins/corpus-codex/.mcp.json",
+    "plugins/corpus-codex/skills",
+    "plugins/corpus-codex/assets/logo.png",
     "docs/OPENAI_PLUGIN.md",
     "LICENSE",
 )
@@ -41,14 +41,14 @@ def build(ref, output_dir):
             if not member.isfile() or path.is_absolute() or ".." in path.parts:
                 raise ValueError(f"Unsafe archive member: {member.name}")
             if member.name not in INPUTS and not (
-                member.name.startswith("plugins/corpus/skills/")
+                member.name.startswith("plugins/corpus-codex/skills/")
                 and (path.name == "SKILL.md" or "references" in path.parts)
                 and path.name != ".DS_Store"
             ):
                 raise ValueError(f"Unexpected package file: {member.name}")
             files[member.name] = archive.extractfile(member).read()
 
-    manifest = json.loads(files["plugins/corpus/.codex-plugin/plugin.json"])
+    manifest = json.loads(files["plugins/corpus-codex/.codex-plugin/plugin.json"])
     version = manifest["version"]
     if not re.fullmatch(r"[0-9]+\.[0-9]+\.[0-9]+", version):
         raise ValueError("Release version must be major.minor.patch")
@@ -57,7 +57,7 @@ def build(ref, output_dir):
     if resolved_ref.startswith("refs/tags/") and tag != f"corpus-openai-v{version}":
         raise ValueError("Release tag does not match the OpenAI manifest version")
     for name in ("corpus-business-formation", "corpus-legal-research"):
-        if f"plugins/corpus/skills/{name}/SKILL.md" not in files:
+        if f"plugins/corpus-codex/skills/{name}/SKILL.md" not in files:
             raise ValueError(f"Missing skill: {name}")
     files["README.md"] = files.pop("docs/OPENAI_PLUGIN.md")
     files["release.json"] = (json.dumps({

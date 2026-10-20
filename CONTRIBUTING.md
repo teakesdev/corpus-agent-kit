@@ -14,6 +14,8 @@ accept changes here:
 | `autopilot/src/tools/naics-data.ts` | Mirrored from upstream — file an issue instead |
 | `skills/corpus-business-formation/`, `skills/corpus-legal-research/` | Canonical skills — edit here |
 | `plugins/corpus/skills/` | Generated copies — never edit; run `scripts/check-plugin-skill-drift.sh --write` |
+| `plugins/corpus-codex/skills/` | Generated (canonical skills + `overlays/openai/snippets`) — never edit; run `python3 scripts/sync-codex-skills.py` |
+| `overlays/openai/snippets/` | The OpenAI-only $0-formation first-response notice — edit here, then regenerate |
 
 ## Development
 
