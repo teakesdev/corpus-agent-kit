@@ -19,6 +19,7 @@ jobs:
       - run: npm run typecheck
       - run: npm run build
       - run: npm pack --workspace mcp-server --dry-run
+      - run: docker build -t corpus-mcp .
       - run: node scripts/check-plugin-package.mjs
       - uses: actions/setup-python@v5
         with:
