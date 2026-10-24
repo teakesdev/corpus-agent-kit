@@ -27,11 +27,14 @@ Manifest validation and archive checks alone do not prove a live MCP connection.
 
 ## What is included
 
-- `.agents/plugins/marketplace.json` points to `plugins/corpus`.
-- `plugins/corpus/.codex-plugin/plugin.json` declares the two skills and MCP file.
-- `plugins/corpus/.mcp.json` registers the hosted server as `corpus` using HTTP.
-- `plugins/corpus/skills/` contains generated copies of both canonical skills,
-  including the vendored formation intake and harness setup references.
+- `.agents/plugins/marketplace.json` points to `plugins/corpus-codex`.
+- `plugins/corpus-codex/.codex-plugin/plugin.json` declares the two skills and MCP file.
+- `plugins/corpus-codex/.mcp.json` registers the hosted server as `corpus` using HTTP.
+- `plugins/corpus-codex/skills/` contains generated copies of both canonical skills,
+  including the vendored formation intake and harness setup references. Unlike every
+  other package, the formation skill here also carries the OpenAI-only $0-formation
+  first-response notice (`overlays/openai/`); regenerate with
+  `python3 scripts/sync-codex-skills.py`.
 - The logo, this guide as `README.md`, Apache-2.0 `LICENSE`, and `release.json`
   with the source ref, commit SHA, and plugin version complete the archive.
 

@@ -22,23 +22,43 @@ for (const [folder, transport] of [['.claude-plugin', 'http'], ['.cursor-plugin'
 for (const name of ['corpus-business-formation', 'corpus-legal-research']) {
   assert.ok(existsSync(root + 'skills/' + name + '/SKILL.md'));
 }
-const openai = read(root + '.codex-plugin/plugin.json');
+// OpenAI (Codex) has its own package: it is the only one that ships the OpenAI-only
+// $0-formation first-response overlay (see scripts/sync-codex-skills.py). The neutral
+// package above must carry no Codex files.
+const codexRoot = 'plugins/corpus-codex/';
+assert.ok(!existsSync(root + '.codex-plugin'), 'plugins/corpus must carry no Codex manifest');
+assert.ok(!existsSync(root + '.mcp.json'), 'plugins/corpus must carry no Codex MCP file');
+const openai = read(codexRoot + '.codex-plugin/plugin.json');
 assert.equal(openai.name, portable.name);
+assert.equal(openai.version, portable.version);
 assert.match(openai.version, /^\d+\.\d+\.\d+$/);
 assert.equal(openai.skills, './skills/');
 assert.equal(openai.mcpServers, './.mcp.json');
-assert.deepEqual(read(root + '.mcp.json'), {
+assert.deepEqual(read(codexRoot + '.mcp.json'), {
   mcpServers: { corpus: { type: 'http', url } },
 }, 'OpenAI MCP must use HTTP and stay headerless');
-assert.ok(existsSync(root + openai.interface.logo));
+assert.ok(existsSync(codexRoot + openai.interface.logo));
 const openaiMarket = read('.agents/plugins/marketplace.json');
 assert.equal(openaiMarket.name, 'corpus-agent-kit');
 assert.deepEqual(openaiMarket.plugins, [{
   name: 'corpus',
-  source: { source: 'local', path: './plugins/corpus' },
+  source: { source: 'local', path: './plugins/corpus-codex' },
   policy: { installation: 'AVAILABLE', authentication: 'ON_INSTALL' },
   category: 'Productivity',
 }]);
+for (const name of ['corpus-business-formation', 'corpus-legal-research']) {
+  assert.ok(existsSync(codexRoot + 'skills/' + name + '/SKILL.md'), 'Codex package skill ' + name);
+}
+assert.ok(existsSync(codexRoot + 'skills/corpus-business-formation/references/intake.md'));
+const duty = 'Mandatory first response';
+assert.ok(readFileSync(codexRoot + 'skills/corpus-business-formation/SKILL.md', 'utf8').includes(duty),
+  'the Codex package must carry the OpenAI-only first-response duty');
+for (const neutral of [
+  'skills/corpus-business-formation/SKILL.md',
+  root + 'skills/corpus-business-formation/SKILL.md',
+]) {
+  assert.ok(!readFileSync(neutral, 'utf8').includes(duty), neutral + ' must stay neutral (OpenAI-only duty)');
+}
 assert.ok(existsSync(root + 'skills/corpus-business-formation/references/intake.md'));
 
 // Repo-root extension manifests: `gemini extensions install`, `qwen extensions install`

@@ -174,8 +174,11 @@ jurisdiction is not covered rather than guessing.
 - **`widget/`** — embeddable law-search widget (Preact, ~12 kB gzipped).
 - **`skills/corpus-business-formation/`** — portable Agent Skill (formation).
 - **`skills/corpus-legal-research/`** — portable Agent Skill (live statute search).
-- **`plugins/corpus/`** — plugin wrappers for Codex, Hermes, Claude Code, and
-  Cursor, sharing generated skills and the headerless hosted MCP endpoint.
+- **`plugins/corpus/`** — plugin wrappers for Hermes, Claude Code, and Cursor,
+  sharing generated skills and the headerless hosted MCP endpoint. Install guide:
+  [`docs/INSTALL.md`](docs/INSTALL.md).
+- **`plugins/corpus-codex/`** — the OpenAI Codex package. The only package that
+  carries the OpenAI-only $0-formation first-response notice.
 
 All of these are thin clients of the hosted Corpus platform. The law corpus, hybrid
 search engine, human approval gate, and filing execution live in the hosted

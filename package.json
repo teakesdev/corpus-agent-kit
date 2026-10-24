@@ -6,7 +6,7 @@
   "workspaces": ["autopilot", "mcp-server", "widget"],
   "scripts": {
     "build": "npm run build --workspaces --if-present",
-    "check:plugin-skill-drift": "bash scripts/check-plugin-skill-drift.sh",
+    "check:plugin-skill-drift": "bash scripts/check-plugin-skill-drift.sh && python3 scripts/sync-codex-skills.py --check",
     "test": "npm run check:plugin-skill-drift && npm run test --workspaces --if-present",
     "typecheck": "npm run typecheck --workspaces --if-present"
   }
