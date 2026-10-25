@@ -59,7 +59,8 @@ The initial socket-based HTTP tests failed with sandbox `listen EPERM`; they wer
 replaced by direct invocation of the real HTTP listener, and the full gate above
 then passed. No dependencies, credentials, provider settings or billing changed.
 Ty-assigned Opus 5.5 reviewed the initial implementation (APPROVE_WITH_NITS, no P0/P1);
-the four P2 corrections below are under follow-up review. Nothing has been deployed.
+the follow-up review confirmed all four P2 corrections resolved, with no P0/P1/P2.
+Nothing has been deployed.
 The implementation branch is pushed; draft PR: https://github.com/teakesdev/corpus-agent-kit/pull/11.
 
 The controller took over after the delegate's sandbox could not write linked
