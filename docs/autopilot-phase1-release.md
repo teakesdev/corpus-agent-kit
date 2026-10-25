@@ -44,8 +44,8 @@ it is not a global dollar cap and its configuration is unchanged. Legacy chat
 keeps its behavior, with a new 64 KiB/5s body-buffer safety limit.
 
 Validation (2026-10-25), from
-`/Users/ty/dev/.worktrees/corpus-agent-kit/autopilot-phase1`, based on
-`5740a9c9382fdebe46ed82acb067a1b881dd7ca0` plus this working diff:
+`/Users/ty/dev/.worktrees/corpus-agent-kit/autopilot-phase1`, implementation commit
+`536d1fb6f4943cb1bae5549a307c3a58889e04c3`:
 
 - `npm test` — exit 0: 114 autopilot tests and 6 MCP bridge tests (120 total),
   plus plugin/Codex skill drift checks. Includes 64 sourced-planning tests and
@@ -54,11 +54,12 @@ Validation (2026-10-25), from
 - `npm run build` — exit 0 across all three workspaces, including widget budgets.
 - `git diff --check` and exact wire-contract `cmp` — exit 0.
 
-Logs: `/private/tmp/autopilot-phase1-kit-controller-{test,typecheck,build}.log`.
+Logs are preserved under `/Volumes/WorkSSD/Artifacts/corpus/autopilot-phase1-20261025`.
 The initial socket-based HTTP tests failed with sandbox `listen EPERM`; they were
 replaced by direct invocation of the real HTTP listener, and the full gate above
 then passed. No dependencies, credentials, provider settings or billing changed.
-This change requires independent review and has not been deployed or pushed.
+This change requires Ty-assigned independent review and has not been deployed.
+The implementation branch is pushed; draft PR: https://github.com/teakesdev/corpus-agent-kit/pull/11.
 
 The controller took over after the delegate's sandbox could not write linked
 Git metadata. Controller integration adds the actual catalog intake fields,
@@ -66,3 +67,7 @@ bounded intake/step context for Qwen ordering, multiline description normalizati
 and stricter handoff query/fragment checks. The web tests consume an actual
 `buildPlan` fixture including an IRS source and a 1,079-character offer qualifier.
 No secret or live offer is contained in that fixture.
+
+Corpus web implementation landed as `df44673fdab41da7ca497743d82da58e51886d01` after its
+local unit/typecheck/docs gate. Its new route policy resolves the concurrent Phase 0 replay
+finding with masks and a blocked prefill link. This is not independent review or deployment.
