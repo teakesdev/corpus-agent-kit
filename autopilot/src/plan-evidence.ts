@@ -1,7 +1,7 @@
 import type { PlanSource } from "./plan-contract.js";
 import { record, STATES } from "./plan-validation.js";
 
-export const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+export const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const clean = (s: string) => s.trim().toLowerCase();
 export function lawSource(nodeId: string, label: string, excerpt: string): PlanSource {
   return { id: `law:${nodeId.toLowerCase()}`, kind: "law", nodeId: nodeId.toLowerCase(), label,
@@ -42,12 +42,22 @@ export function parseNode(text: string, expectedId: string, jurisdictionName: st
       typeof node.citation !== "string" || !node.citation || node.citation.length > 400 ||
       typeof node.bodyText !== "string" || !node.bodyText.trim() || !record(node.jurisdiction) ||
       typeof node.jurisdiction.name !== "string" || clean(node.jurisdiction.name) !== clean(jurisdictionName)) return null;
-    return lawSource(node.nodeId, node.citation, (prefix ? prefix + "\n" : "") + node.bodyText.slice(0, 3000));
+    const heading = prefix ? prefix + "\n" : "";
+    const marker = "\n…truncated; open the source for the complete provision.";
+    const bodyLimit = Math.min(3000, 5000 - heading.length);
+    const body = node.bodyText.length > bodyLimit
+      ? node.bodyText.slice(0, bodyLimit - marker.length) + marker : node.bodyText;
+    return lawSource(node.nodeId, node.citation, heading + body);
   } catch { return null; }
 }
 
 export function exactLocalCoverage(text: string, state: string, city: string): { code: string; name: string } | null {
-  const names = [city, `${city}, ${state}`, `${city}, ${STATES[state]}`].map(clean);
+  // Strip only an exact selected-state suffix; another state or a second comma fails closed.
+  const parts = city.split(",").map(s => s.trim());
+  if (parts.length > 2 || (parts.length === 2 && ![state, STATES[state]].some(s => clean(s) === clean(parts[1])))) return null;
+  const name = parts[0];
+  if (!name) return null;
+  const names = [name, `${name}, ${state}`, `${name}, ${STATES[state]}`].map(clean);
   const matches: { code: string; name: string }[] = [];
   for (const line of text.split("\n")) {
     const row = line.match(/^- ([A-Z0-9-]+) — (.+) \((?:municipal|city)\): (.+)$/);

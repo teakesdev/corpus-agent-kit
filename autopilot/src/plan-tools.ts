@@ -7,6 +7,13 @@ export const TOOL_TIMEOUT_MS = 4500;
 export const PLAN_TIMEOUT_MS = 24000;
 export const MAX_TOOL_BYTES = 131072;
 
+/** Only a known hosted semantic failure is exposed, using our own categorical copy. */
+export class UnsupportedFormationError extends PlanError {
+  constructor() {
+    super(400, "Corpus does not currently support formation for the selected state and entity. Choose another state or entity before continuing.");
+  }
+}
+
 /** Enforces a deadline even when an injected/third-party implementation ignores abort. */
 export async function bounded<T>(work: (signal: AbortSignal) => Promise<T>, parent: AbortSignal, ms: number): Promise<T> {
   const controller = new AbortController();
@@ -64,10 +71,18 @@ export const hostedTool: ToolCall = async (name, args, signal) => {
   const json: unknown = JSON.parse(await readBoundedResponse(response, signal));
   if (!record(json) || json.error || !record(json.result)) throw new Error("Tool failed");
   const result = json.result;
-  if (result.isError || (record(result.structuredContent) && result.structuredContent.isError)) throw new Error("Tool failed");
   let text: unknown = record(result.structuredContent) ? result.structuredContent.text : undefined;
   if (text === undefined && Array.isArray(result.content)) {
     text = result.content.filter(c => record(c) && c.type === "text" && typeof c.text === "string").map(c => c.text).join("\n");
+  }
+  if (result.isError || (record(result.structuredContent) && result.structuredContent.isError)) {
+    const kind = args.entityType === "llc" ? "LLC" : args.entityType === "nonprofit" ? "Nonprofit" : null;
+    if ((name === "formation.requirements" || name === "formation.handoff") && kind &&
+      typeof args.state === "string" && /^[A-Z]{2}$/.test(args.state) && typeof text === "string" &&
+      text.startsWith(`${kind} formation is not available in US-${args.state}. LLC formation is available in `)) {
+      throw new UnsupportedFormationError();
+    }
+    throw new Error("Tool failed");
   }
   if (typeof text !== "string" || !text.trim() || /^Error:/i.test(text.trim())) throw new Error("Tool text missing");
   return text;

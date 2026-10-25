@@ -1,5 +1,5 @@
 import type { PlanInput, PlanResponse, PlanHandoff, PlanItem, PlanSource } from "./plan-contract.js";
-import { bounded, hostedTool, MAX_TOOL_BYTES, PLAN_TIMEOUT_MS, TOOL_TIMEOUT_MS, type ToolCall, type ToolName } from "./plan-tools.js";
+import { bounded, hostedTool, MAX_TOOL_BYTES, PLAN_TIMEOUT_MS, TOOL_TIMEOUT_MS, UnsupportedFormationError, type ToolCall, type ToolName } from "./plan-tools.js";
 import { CAMPAIGN_KEYS, PlanError, STATES, validatePlanInput } from "./plan-validation.js";
 import { exactLocalCoverage, parseNode, parseSearch } from "./plan-evidence.js";
 import { getQwen } from "./qwen.js";
@@ -21,18 +21,31 @@ const RA = "Most states require an LLC to name a registered agent — it can be 
 const ANNUAL = "Most states also charge a recurring fee to keep an LLC alive (often called an annual report or franchise tax) — the amount and due date vary by state.";
 const ENTITY = "An LLC, an EIN, and a registered agent are three different things: the LLC is the legal entity your state creates; the EIN is the federal tax ID the IRS issues; the registered agent is the person or company that receives legal mail for the entity at a street address in the formation state.";
 
-function requestTools(deps: PlanDeps, signal: AbortSignal, tools: string[], warnings: string[]) {
+const FINISH_RESERVE_MS = 500;
+const MIN_TOOL_BUDGET_MS = 100;
+
+function requestTools(deps: PlanDeps, signal: AbortSignal, tools: string[], warnings: string[], deadline = Date.now() + PLAN_TIMEOUT_MS) {
   let calls = 0;
   return async (name: ToolName, args: Record<string, unknown>): Promise<string | null> => {
     signal.throwIfAborted();
+    const budget = Math.min(deps.toolTimeoutMs ?? TOOL_TIMEOUT_MS, TOOL_TIMEOUT_MS, deadline - Date.now() - FINISH_RESERVE_MS);
+    if (budget < Math.min(MIN_TOOL_BUDGET_MS, deps.toolTimeoutMs ?? TOOL_TIMEOUT_MS)) {
+      warnings.push(`${name} was skipped to finish within the planning deadline; related items need checking.`);
+      return null;
+    }
     if (++calls > 6) throw new Error("Tool limit reached");
     try {
-      const text = await bounded(s => (deps.tool ?? hostedTool)(name, args, s), signal, Math.min(deps.toolTimeoutMs ?? TOOL_TIMEOUT_MS, TOOL_TIMEOUT_MS));
+      const text = await bounded(s => (deps.tool ?? hostedTool)(name, args, s), signal, budget);
       if (typeof text !== "string" || !text.trim() || Buffer.byteLength(text) > MAX_TOOL_BYTES || /^Error:/i.test(text.trim())) throw new Error("Invalid tool text");
       if (!tools.includes(name)) tools.push(name);
       return text;
-    } catch {
+    } catch (error) {
       signal.throwIfAborted();
+      if (error instanceof UnsupportedFormationError) {
+        if (name === "formation.handoff") throw error;
+        warnings.push(error.message);
+        return null;
+      }
       warnings.push(`${name} was unavailable or returned an unreadable response; related items need checking.`);
       return null;
     }
@@ -52,11 +65,13 @@ const selectKnown: Selector = async (ids, signal, context) => {
 /** No user source records or model legal prose can enter the request-local ledger. */
 export async function buildPlan(raw: PlanInput, deps: PlanDeps = {}, parent = new AbortController().signal): Promise<PlanResponse> {
   const input = validatePlanInput(raw);
+  const timeout = Math.min(deps.timeoutMs ?? PLAN_TIMEOUT_MS, PLAN_TIMEOUT_MS);
+  const deadline = Date.now() + timeout;
   return bounded(async signal => {
     const createdAt = new Date().toISOString();
     const tools: string[] = [];
     const warnings = ["Source binding establishes provenance, not applicability or completeness. Search matches and unresolved items need checking."];
-    const call = requestTools(deps, signal, tools, warnings);
+    const call = requestTools(deps, signal, tools, warnings, deadline);
     const ledger = new Map<string, PlanSource>();
     const items: PlanItem[] = [];
     function guide(id: string, label: string, url: string, excerpt: string) {
@@ -100,7 +115,7 @@ export async function buildPlan(raw: PlanInput, deps: PlanDeps = {}, parent = ne
     item("registered_agent", "registered_agent", "Check the registered-agent or registered-office rules", raText, [guide("guide:ra", "The founder legal checklist — registered agents", CHECKLIST, RA)]);
     item("ein", "ein", "Determine whether an EIN is needed", input.entityType === "nonprofit"
       ? "The single-member LLC exception in the linked guide is specific to LLCs. Check the IRS requirements for this nonprofit. Apply directly through the IRS for free."
-      : EIN + " Apply directly through the IRS for free.", [guide("guide:ein", "After forming an LLC — EIN", GUIDE + "#step-ein", EIN), guide("guide:irs", "IRS — single-member LLC guidance", "https://www.irs.gov/businesses/small-businesses-self-employed/single-member-limited-liability-companies", EIN)]);
+      : EIN + " Apply directly through the IRS for free.", [guide("guide:ein", "After forming an LLC — EIN", GUIDE + "#step-ein", EIN), guide("guide:irs", "IRS — single-member LLC guidance", "https://www.irs.gov/businesses/small-businesses-self-employed/single-member-limited-liability-companies", "Official IRS page. No excerpt was retrieved; open the page for the current guidance.")]);
     item("annual_report", "annual_report", "Check reports and recurring state obligations", input.entityType === "nonprofit"
       ? "Check the selected state's nonprofit reporting requirements; the linked checklist describes LLCs." : ANNUAL,
       [guide("guide:annual", "The founder legal checklist — recurring fees", CHECKLIST, ANNUAL)]);
@@ -139,7 +154,7 @@ export async function buildPlan(raw: PlanInput, deps: PlanDeps = {}, parent = ne
     item("local", "local", local ? "Review local source matches" : "Local coverage needs checking", local
       ? `Coverage confirms a searchable entry for ${local.name} (${local.code}); it does not establish which rules apply to this activity.`
       : "No exact, unambiguous, searchable coverage entry was confirmed for the operating city. Local requirements have not been determined.");
-    if (local) await search(input.activity || "business", local.code, local.name, "local");
+    if (local) await search("business license", local.code, local.name, "local");
     else warnings.push("Local coverage gap: no local search was run.");
 
     const lines = catalog?.split("\n").filter(l => /^(?:PRICE(?: \(live\))?:|FOUNDING DISCOUNT:|EXPEDITE \(|SKIP REVIEW \(|TENNESSEE MEMBERS:|EIN ADD-ON: temporarily unavailable)/.test(l)) ?? [];
@@ -150,7 +165,9 @@ export async function buildPlan(raw: PlanInput, deps: PlanDeps = {}, parent = ne
     if (input.mode === "ready" && !pricing.available) warnings.push("Current pricing is unavailable; no price or founding offer has been assumed.");
 
     const selector = deps.select ?? (process.env.QWEN_API_KEY && process.env.QWEN_BASE_URL ? selectKnown : undefined);
-    if (selector) {
+    if (selector && deadline - Date.now() < 2500) {
+      warnings.push("Qwen ordering was skipped to finish within the planning deadline; deterministic sourced items are shown.");
+    } else if (selector) {
       try {
         const selected = await bounded(s => selector(items.map(i => i.id), s, { input, items: items.map(({ id, title, category }) => ({ id, title, category })) }), signal, Math.min(deps.modelTimeoutMs ?? 2000, 2000));
         if (!Array.isArray(selected) || selected.length > 20 || selected.some(id => typeof id !== "string")) throw new Error("Invalid selection");
@@ -165,7 +182,7 @@ export async function buildPlan(raw: PlanInput, deps: PlanDeps = {}, parent = ne
       }
     } else warnings.push("Qwen ordering is not configured; deterministic sourced items are shown.");
     return { version: 1, createdAt, items, sources: [...ledger.values()], pricing, tools, warnings };
-  }, parent, Math.min(deps.timeoutMs ?? PLAN_TIMEOUT_MS, PLAN_TIMEOUT_MS));
+  }, parent, timeout);
 }
 
 export async function handoffPlan(raw: PlanInput, deps: PlanDeps = {}, parent = new AbortController().signal): Promise<PlanHandoff> {

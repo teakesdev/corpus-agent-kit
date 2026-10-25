@@ -3,8 +3,9 @@ import { buildPlan, handoffPlan } from "../src/plan.js";
 import { validatePlanInput } from "../src/plan-validation.js";
 import type { PlanInput } from "../src/plan-contract.js";
 import { exactLocalCoverage, parseNode, parseSearch } from "../src/plan-evidence.js";
-import { hostedTool, bounded, MAX_TOOL_BYTES } from "../src/plan-tools.js";
+import { hostedTool, bounded, MAX_TOOL_BYTES, UnsupportedFormationError } from "../src/plan-tools.js";
 import type { ToolCall } from "../src/plan-tools.js";
+import hostedTranscripts from "./fixtures/autopilot-hosted-transcripts.json";
 
 const input: PlanInput = { mode: "ready", activity: "Fictional software business", formationState: "MS", operatingState: "TX", operatingCity: "Austin", entityType: "llc", campaign: {} };
 const catalog = `Formation requirements — LLC in MS (US-MS):
@@ -22,15 +23,15 @@ PRICE (live): $123.00 all-in — test quote only.
 
 FOUNDING DISCOUNT: $10 off only while slots remain; a quote does not reserve one.`;
 const emptyTool = async () => "No results found.";
-const uuid = "11111111-2222-3333-4444-555555555555";
-const otherId = "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee";
+const uuid = "11111111-2222-4333-8444-555555555555";
+const otherId = "aaaaaaaa-bbbb-4ccc-addd-eeeeeeeeeeee";
 const search = (name = "Texas", id = uuid) => `1 of 1 results for "business tax registration" in TX (keyword):\n\n1. Tax Code § 1 — Registration\n   ${name} · Tax Code\n   Test source excerpt, not a conclusion.\n   node_id: ${id}`;
 const coverage = "- TX-AUS — Austin (municipal): 100 provisions, 80 searchable chunks";
 const node = (id = uuid, name = "Texas") => JSON.stringify({ nodeId: id, citation: "Tax Code § 1", bodyText: "Full test provision.", jurisdiction: { name } });
 function fixture(overrides: Partial<Record<string, string>> = {}): ToolCall {
   return async (name, args) => overrides[name] ?? (name === "formation.requirements" ? catalog : name === "law.list_coverage" ? coverage : name === "law.get_node" ? node() : args.jurisdiction === "TX" ? search() : args.jurisdiction === "TX-AUS" ? search("Austin", otherId) : "No results found.");
 }
-afterEach(() => { vi.unstubAllGlobals(); vi.unstubAllEnvs(); });
+afterEach(() => { vi.unstubAllGlobals(); vi.unstubAllEnvs(); vi.useRealTimers(); });
 
 describe("sourced planning", () => {
   it("rejects unsupported state and client-supplied sources", () => {
@@ -96,6 +97,13 @@ describe("sourced planning", () => {
     expect(tool.mock.calls.some(([n, a]) => n === "law.search" && a.jurisdiction === "TX-AUS")).toBe(false);
     expect(p.warnings.join(" ")).toContain("Local coverage gap");
   });
+  it.each(["Austin", "Austin, TX", "Austin, Texas", "Austin, tx"])("matches only selected-state city suffixes against confirmed coverage: %s", city => {
+    expect(exactLocalCoverage(coverage, "TX", city)?.code).toBe("TX-AUS");
+    expect(exactLocalCoverage(coverage.replace("Austin (", "Austin, Texas ("), "TX", city)?.code).toBe("TX-AUS");
+  });
+  it.each(["Austin, CA", "Austin, California", "Austin, TX, USA", "Austin City, TX", "Austin, Tex", ", TX"])("rejects mismatched or fuzzy city input: %s", city => {
+    expect(exactLocalCoverage(coverage, "TX", city)).toBeNull();
+  });
   it("accepts exact delivered searchable city entries", () => {
     expect(exactLocalCoverage("- TX-AUS — Austin (municipal): delivered after the last daily count — searchable now; counts appear after the next daily refresh", "TX", "Austin")?.code).toBe("TX-AUS");
   });
@@ -110,10 +118,26 @@ describe("sourced planning", () => {
     const p = await buildPlan(input, { tool: fixture({ "formation.requirements": text }) });
     expect(p.pricing).toMatchObject({ available: false, lines: [] });
   });
+  it("describes the unfetched IRS page without attributing Corpus copy to it", async () => {
+    const plan = await buildPlan(input, { tool: fixture() });
+    expect(plan.sources.find(s => s.id === "guide:irs")?.excerpt).toBe("Official IRS page. No excerpt was retrieved; open the page for the current guidance.");
+    expect(plan.sources.find(s => s.id === "guide:ein")?.excerpt).toContain("A bank or state requirement");
+  });
   it("preserves the complete current price and offer qualifier", async () => {
     const p = await buildPlan(input, { tool: fixture() });
     expect(p.pricing).toMatchObject({ available: true, state: "MS", lines: ["PRICE (live): $123.00 all-in — test quote only.", "FOUNDING DISCOUNT: $10 off only while slots remain; a quote does not reserve one."] });
     expect(JSON.stringify(p)).not.toContain("needed for everyone");
+  });
+  it("uses a fixed local keyword query without sending the founder activity to law.search", async () => {
+    const tool = vi.fn(fixture());
+    const plan = await buildPlan(input, { tool });
+    const searches = tool.mock.calls.filter(([name]) => name === "law.search");
+    expect(searches.every(([, args]) => !JSON.stringify(args).includes(input.activity))).toBe(true);
+    expect(searches.find(([, args]) => args.jurisdiction === "TX-AUS")?.[1]).toEqual({
+      query: "business license", jurisdiction: "TX-AUS", mode: "keyword", limit: 2,
+    });
+    expect(plan.items.find(i => i.id === "local")?.needsCheck).toBe(true);
+    expect(plan.items.find(i => i.id === "local")?.body).toContain("does not establish which rules apply");
   });
   it("uses a bounded six-tool budget", async () => {
     const tool = vi.fn(fixture());
@@ -134,8 +158,90 @@ describe("sourced planning", () => {
     expect(p.items.length).toBeGreaterThanOrEqual(6);
     expect(p.tools).not.toContain("qwen.order_known_items");
   });
-  it("enforces total duration even with an uncooperative tool", async () => {
-    await expect(buildPlan(input, { timeoutMs: 5, tool: async () => new Promise(() => {}) })).rejects.toThrow("timed out");
+  it("returns partial sourced output within 24 seconds for six 4.4-second tools and skips ordering", async () => {
+    vi.useFakeTimers();
+    const started = Date.now();
+    const signals: AbortSignal[] = [];
+    const select = vi.fn(async () => ["ein"]);
+    const tool = vi.fn(async (name, args, signal) => {
+      signals.push(signal);
+      await new Promise<void>((resolve, reject) => {
+        const timer = setTimeout(resolve, 4400);
+        signal.addEventListener("abort", () => { clearTimeout(timer); reject(new Error("cancelled")); }, { once: true });
+      });
+      return fixture()(name, args, signal);
+    }) as ReturnType<typeof vi.fn<ToolCall>>;
+    const pending = buildPlan(input, { tool, select });
+    await vi.advanceTimersByTimeAsync(23500);
+    const plan = await pending;
+    expect(Date.now() - started).toBe(23500);
+    expect(tool).toHaveBeenCalledTimes(6);
+    expect(signals.at(-1)?.aborted).toBe(true);
+    expect(signals.slice(0, -1).every(s => !s.aborted)).toBe(true);
+    expect(plan.pricing.available).toBe(true);
+    expect(plan.sources.find(s => s.nodeId === uuid)?.excerpt).toBe("Full test provision.");
+    expect(plan.items.find(i => i.id === "local")?.sourceIds).toEqual([]);
+    expect(plan.items.every(i => i.needsCheck)).toBe(true);
+    expect(plan.warnings.join(" ")).toContain("Qwen ordering was skipped");
+    expect(select).not.toHaveBeenCalled();
+    expect(vi.getTimerCount()).toBe(0);
+  });
+  it("skips calls without a useful remaining budget and retains deterministic items", async () => {
+    vi.useFakeTimers();
+    const tool = vi.fn(async () => new Promise<string>(() => {}));
+    const pending = buildPlan(input, { tool, timeoutMs: 5000 });
+    await vi.advanceTimersByTimeAsync(4500);
+    const plan = await pending;
+    expect(tool).toHaveBeenCalledTimes(1);
+    expect(plan.items.length).toBeGreaterThanOrEqual(6);
+    expect(plan.warnings.join(" ")).toContain("was skipped to finish");
+    expect(vi.getTimerCount()).toBe(0);
+  });
+  it("caps tools at 4.5 seconds even when a larger per-tool limit is requested", async () => {
+    vi.useFakeTimers();
+    let observed: AbortSignal | undefined;
+    const pending = buildPlan({ ...input, operatingState: null, operatingCity: "" }, {
+      toolTimeoutMs: 9000, tool: async (_n, _a, signal) => { observed = signal; return new Promise(() => {}); },
+    });
+    await vi.advanceTimersByTimeAsync(4500);
+    expect((await pending).items.length).toBeGreaterThanOrEqual(6);
+    expect(observed?.aborted).toBe(true);
+  });
+  it("preserves caller cancellation even when tools ignore abort", async () => {
+    vi.useFakeTimers();
+    const parent = new AbortController();
+    let observed: AbortSignal | undefined;
+    const tool = vi.fn(async (_n, _a, signal) => { observed = signal; return new Promise<string>(() => {}); });
+    const pending = buildPlan(input, { tool }, parent.signal);
+    const rejected = expect(pending).rejects.toThrow("timed out");
+    await vi.advanceTimersByTimeAsync(100);
+    parent.abort();
+    await rejected;
+    expect(observed?.aborted).toBe(true);
+    expect(tool).toHaveBeenCalledTimes(1);
+    expect(vi.getTimerCount()).toBe(0);
+  });
+  it("enforces the absolute deadline even when work ignores abort", async () => {
+    vi.useFakeTimers();
+    const pending = bounded(async () => new Promise(() => {}), new AbortController().signal, 24000);
+    const rejected = expect(pending).rejects.toThrow("timed out");
+    await vi.advanceTimersByTimeAsync(24000);
+    await rejected;
+    expect(vi.getTimerCount()).toBe(0);
+  });
+  it.each(["11111111-2222-0333-8444-555555555555", "11111111-2222-9333-8444-555555555555", "11111111-2222-4333-4444-555555555555"])("rejects law UUIDs incompatible with the web validator: %s", id => {
+    expect(parseSearch(search("Texas", id), "Texas")).toEqual([]);
+    expect(parseNode(node(id), id, "Texas")).toBeNull();
+  });
+  it("bounds node warning plus excerpt to 5000 characters and marks truncation", () => {
+    const prefix = "WARNING: " + "w".repeat(1991);
+    const bodyText = "b".repeat(7000);
+    const text = prefix + "\n" + JSON.stringify({ nodeId: uuid, citation: "Tax Code § 1", bodyText, jurisdiction: { name: "Texas" } });
+    const source = parseNode(text, uuid, "Texas")!;
+    expect(source.excerpt).toHaveLength(5000);
+    expect(source.excerpt).toContain(prefix + "\n");
+    expect(source.excerpt).toMatch(/…truncated; open the source for the complete provision\.$/);
+    expect(parseNode(node(), uuid, "Texas")?.excerpt).toBe("Full test provision.");
   });
   it("parses node warnings and rejects mismatched/malformed evidence", () => {
     expect(parseNode("NOT YET IN EFFECT: test warning.\n" + node(), uuid, "Texas")?.excerpt).toContain("NOT YET IN EFFECT");
@@ -199,6 +305,31 @@ describe("MCP wire transport", () => {
     vi.stubGlobal("fetch", async () => new Response(JSON.stringify(body)));
     await expect(hostedTool("law.search", {}, new AbortController().signal)).rejects.toThrow();
   });
+  it.each([true, false])("categorizes unsupported formation isError without disclosing hosted diagnostics (structured=%s)", async structured => {
+    const diagnostic = "Nonprofit formation is not available in US-MS. LLC formation is available in supported states; internal diagnostic marker.";
+    vi.stubGlobal("fetch", async () => new Response(JSON.stringify({ result: structured
+      ? { structuredContent: { isError: true, text: diagnostic } }
+      : { isError: true, content: [{ type: "text", text: diagnostic }] } })));
+    const plan = await buildPlan({ ...input, entityType: "nonprofit", operatingState: null, operatingCity: "" });
+    expect(plan.warnings.join(" ")).toContain("does not currently support formation");
+    expect(plan.pricing.available).toBe(false);
+    expect(JSON.stringify(plan)).not.toContain("internal diagnostic");
+    await expect(handoffPlan({ ...input, entityType: "nonprofit" })).rejects.toBeInstanceOf(UnsupportedFormationError);
+    await expect(handoffPlan({ ...input, entityType: "nonprofit" })).rejects.toThrow("Choose another state or entity");
+  });
+  it.each([
+    { state: "TX", isError: true, name: "formation.requirements" },
+    { state: "MS", isError: false, name: "formation.requirements" },
+    { state: "MS", isError: true, name: "law.search" },
+  ] as const)("never promotes unverified unsupported text to a semantic error: %j", async ({ state, isError, name }) => {
+    const diagnostic = "Nonprofit formation is not available in US-MS. LLC formation is available in supported states; private details.";
+    vi.stubGlobal("fetch", async () => new Response(JSON.stringify({ result: { isError, structuredContent: { text: diagnostic } } })));
+    const pending = hostedTool(name, { state, entityType: "nonprofit" }, new AbortController().signal);
+    if (isError) {
+      await expect(pending).rejects.not.toBeInstanceOf(UnsupportedFormationError);
+      await expect(pending).rejects.toThrow("Tool failed");
+    } else await expect(pending).resolves.toBe(diagnostic);
+  });
   it("bounds response bytes before JSON parsing", async () => {
     vi.stubGlobal("fetch", async () => new Response("a".repeat(MAX_TOOL_BYTES + 1)));
     await expect(hostedTool("law.search", {}, new AbortController().signal)).rejects.toThrow("too large");
@@ -208,5 +339,38 @@ describe("MCP wire transport", () => {
     const work = vi.fn(async () => 1);
     await expect(bounded(work, controller.signal, 10)).rejects.toThrow("timed out");
     expect(work).not.toHaveBeenCalled();
+  });
+});
+
+
+describe("real hosted formatter contract", () => {
+  it("reads actual law.search text and preserves the hosted node ID", () => {
+    expect(parseSearch(hostedTranscripts.search, "Mississippi")).toEqual([expect.objectContaining({
+      nodeId: "089a2104-d704-4e93-8072-5bbbabc7ace6", label: "Miss. Code § 67-1-5 — Definitions",
+      excerpt: "As used in this chapter the following words shall have the meanings ascribed...",
+    })]);
+    expect(parseSearch(hostedTranscripts.search, "Texas")).toEqual([]);
+  });
+  it("reads actual coverage text and rejects its San Diego placeholder", () => {
+    expect(exactLocalCoverage(hostedTranscripts.coverage, "CA", "San Francisco, CA")).toEqual({ code: "CA-SF", name: "San Francisco" });
+    expect(exactLocalCoverage(hostedTranscripts.coverage, "CA", "San Diego")).toBeNull();
+    expect(exactLocalCoverage(hostedTranscripts.coverage, "TX", "San Francisco, CA")).toBeNull();
+  });
+  it("builds a sourced ready-mode plan from actual requirements and law transcripts", async () => {
+    const plan = await buildPlan({ ...input, operatingState: "MS", operatingCity: "" }, {
+      tool: async name => name === "formation.requirements" ? hostedTranscripts.requirements
+        : name === "law.search" ? hostedTranscripts.search : "No results found.",
+    });
+    expect(plan.items.find(i => i.id === "intake_0")?.body).toContain("- proposed business name");
+    expect(plan.items.find(i => i.id === "state_tax")?.sourceIds).toEqual(["law:089a2104-d704-4e93-8072-5bbbabc7ace6"]);
+    expect(plan.pricing.available).toBe(true);
+    expect(plan.pricing.lines).toEqual(hostedTranscripts.requirements.split("\n").filter(line => line.startsWith("PRICE (live):")));
+    expect(plan.pricing.lines[0]).toContain("included in the Corpus bundle; state requirements vary");
+    expect(plan.items.every(i => i.needsCheck)).toBe(true);
+  });
+  it("reads the actual hosted handoff URL and its missing fields", async () => {
+    const result = await handoffPlan(input, { tool: async () => hostedTranscripts.handoff });
+    expect(result.url).toBe(hostedTranscripts.handoff.split("\n").find(line => line.startsWith("https://")));
+    expect(result.missing).toEqual(["proposed business name", "principal office address (street, city, state)", "contact email", "NAICS industry code", "management type (member- or manager-managed)", "at least one member", "an organizer"]);
   });
 });
