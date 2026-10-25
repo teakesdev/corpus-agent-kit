@@ -58,7 +58,8 @@ Logs are preserved under `/Volumes/WorkSSD/Artifacts/corpus/autopilot-phase1-202
 The initial socket-based HTTP tests failed with sandbox `listen EPERM`; they were
 replaced by direct invocation of the real HTTP listener, and the full gate above
 then passed. No dependencies, credentials, provider settings or billing changed.
-This change requires Ty-assigned independent review and has not been deployed.
+Ty-assigned Opus 5.5 reviewed the initial implementation (APPROVE_WITH_NITS, no P0/P1);
+the four P2 corrections below are under follow-up review. Nothing has been deployed.
 The implementation branch is pushed; draft PR: https://github.com/teakesdev/corpus-agent-kit/pull/11.
 
 The controller took over after the delegate's sandbox could not write linked
@@ -71,3 +72,27 @@ No secret or live offer is contained in that fixture.
 Corpus web implementation landed as `df44673fdab41da7ca497743d82da58e51886d01` after its
 local unit/typecheck/docs gate. Its new route policy resolves the concurrent Phase 0 replay
 finding with masks and a blocked prefill link. This is not independent review or deployment.
+
+
+## Review corrections — 2026-10-25
+
+Code commit `a4454e5a565e5df07bc548c19e77119fa189779f`, tested from
+`/Users/ty/dev/.worktrees/corpus-agent-kit/autopilot-review-fixes`:
+
+- IRS guide entry states that no excerpt was retrieved; Corpus guide text keeps its own source.
+- Tool budgets account for remaining overall time and reserve 500 ms to return partial results;
+  optional model ordering is skipped when time is short. Parent disconnect still cancels work.
+- UUID rules match the web; full-provision excerpts are bounded and visibly truncated.
+- Unsupported combinations get categorical errors, exact city/state suffixes are accepted, and
+  local search uses fixed keywords instead of the founder's activity sentence.
+- Actual Corpus formatter fixtures cover requirements, search, coverage and handoff parsing.
+
+Controller independently reran `npm test` (143 autopilot + 6 MCP bridge = 149 tests, no skips),
+`npm run typecheck` and `npm run build`; all exited 0. Wire contracts and the shared hosted fixture
+compare byte-for-byte. Tools/models are mocked; no live metered call or filing occurred.
+
+Web fixes separately preserve progress through refresh, use monotonic quote age and respect the
+public order-pause signal. Deploy FC before the matching web revision, under separate authorization.
+Monitor shared free-tier credits and regulatory-notes cost during the article pilot; coverage caching
+is deferred. The 20-plan qualitative review remains open. Phase 2 token/email helpers in Corpus are
+foundations only; no public email or durable-resume endpoint is enabled.
