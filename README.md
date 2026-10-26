@@ -59,8 +59,10 @@ Running work log for this integration: [`WORKLOG.md`](WORKLOG.md).
 
 **[corpuslaw.us/autopilot](https://corpuslaw.us/autopilot)** — the Formation
 Autopilot from this repo (`autopilot/`), running on Alibaba Cloud Function
-Compute. Describe a business in plain English; get a cited launch checklist and
-a prefilled formation handoff.
+Compute. Describe a business in plain English; get a launch checklist linked to
+reviewed guides and the formation catalog, with unresolved requirements marked
+Needs checking, and a prefilled formation handoff. Broad keyword law matches are
+withheld until their relevance can be verified.
 
 ### 3. Drop a skill folder — or install a plugin
 
@@ -167,7 +169,8 @@ jurisdiction is not covered rather than guessing.
 ## What's in this repo
 
 - **`autopilot/`** — Formation Autopilot: a Qwen Cloud agent that turns an
-  ambiguous founder description into a cited launch checklist and a prefilled,
+  ambiguous founder description into a launch checklist with guide and catalog
+  sources and a prefilled,
   human-approved formation handoff. *(Qwen Cloud Hackathon Track 4 winner.)*
 - **`mcp-server/`** — zero-dependency stdio MCP server, for clients that cannot
   speak HTTP MCP.
@@ -205,7 +208,7 @@ See [docs/architecture.md](docs/architecture.md) for the Mermaid source.
 
 ## Two-lane model routing
 
-The autopilot uses two Qwen models with different cost/quality profiles:
+Legacy `/api/chat` uses two Qwen models with different cost/quality profiles:
 
 - **Fast lane** (`QWEN_MODEL_FAST`, default `qwen-flash-2025-07-28`): all standard turns —
   intent parsing, law search, checklist generation. Low latency, low spend.
@@ -215,6 +218,8 @@ The autopilot uses two Qwen models with different cost/quality profiles:
 
 The lane switch is automatic. Routing logic lives in `autopilot/src/agent.ts`.
 The hourly spend cap (`SPEND_CAP_TURNS_PER_HOUR`) applies across both lanes.
+The sourced `/api/plan` path builds deterministic guide/catalog items and uses
+the fast lane only for optional ordering; model output cannot add legal sources.
 
 ## Human in the loop (gates)
 
@@ -287,6 +292,8 @@ The server exposes:
 
 - `GET  /healthz` — liveness probe
 - `POST /api/chat` — agent turn endpoint
+- `POST /api/plan` — planning with guide and catalog sources; unresolved law remains Needs checking
+- `POST /api/plan/handoff` — validate a ready-mode draft through the hosted handoff
 - `GET  /` — chat UI
 
 Deploy to Alibaba Cloud Function Compute: see
