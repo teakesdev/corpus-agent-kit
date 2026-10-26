@@ -104,7 +104,7 @@ Ty-assigned Opus 5.5 reviewed the initial implementation (APPROVE_WITH_NITS, no 
 the follow-up review confirmed all four P2 corrections resolved, with no P0/P1/P2.
 Deployment had not occurred at this initial validation; the current deployed
 state is recorded above. The implementation and mitigation are pushed on existing
-PR [#11](https://github.com/teakesdev/corpus-agent-kit/pull/11); the PR is not merged.
+PR [#11](https://github.com/teakesdev/corpus-agent-kit/pull/11); it was unmerged at deployment and subsequently merged as `a53fd68299eaf1dc1529122742c4e0e3eeb1f648` on 2026-10-26 at 05:11:48 UTC.
 
 The controller took over after the delegate's sandbox could not write linked
 Git metadata. Controller integration adds the actual catalog intake fields,
