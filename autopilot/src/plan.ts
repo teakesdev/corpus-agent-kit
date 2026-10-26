@@ -1,7 +1,7 @@
 import type { PlanInput, PlanResponse, PlanHandoff, PlanItem, PlanSource } from "./plan-contract.js";
 import { bounded, hostedTool, MAX_TOOL_BYTES, PLAN_TIMEOUT_MS, TOOL_TIMEOUT_MS, UnsupportedFormationError, type ToolCall, type ToolName } from "./plan-tools.js";
-import { CAMPAIGN_KEYS, PlanError, STATES, validatePlanInput } from "./plan-validation.js";
-import { exactLocalCoverage, parseNode, parseSearch } from "./plan-evidence.js";
+import { CAMPAIGN_KEYS, PlanError, validatePlanInput } from "./plan-validation.js";
+import { exactLocalCoverage } from "./plan-evidence.js";
 import { getQwen } from "./qwen.js";
 import { lane } from "./routing.js";
 
@@ -133,28 +133,22 @@ export async function buildPlan(raw: PlanInput, deps: PlanDeps = {}, parent = ne
       ? `Operating state: ${input.operatingState}. Tax registration applicability has not been determined. Check the rules using the actual activity and tax situation.`
       : "Operating state is not selected. Tax registration applicability has not been determined.");
 
-    async function search(query: string, jurisdiction: string, jurisdictionName: string, itemId: string) {
-      const text = await call("law.search", { query, jurisdiction, mode: "keyword", limit: 2 });
-      const sources = text ? parseSearch(text, jurisdictionName) : [];
-      for (const source of sources) ledger.set(source.id, source);
-      items.find(i => i.id === itemId)!.sourceIds.push(...sources.map(s => s.id));
-      if (!sources.length) warnings.push(`No usable ${jurisdiction} source records were retrieved; this does not establish that no requirements apply.`);
-      return sources;
+    async function search(query: string, jurisdiction: string, itemId: string) {
+      await call("law.search", { query, jurisdiction, mode: "keyword", limit: 2 });
+      // A real node in the selected jurisdiction proves provenance only. Broad
+      // keyword matches have not been vetted for relevance to this plan, so do
+      // not bind them as supporting law or promote them with get_node.
+      const title = items.find(i => i.id === itemId)!.title;
+      warnings.push(`No relevant provision was verified for “${title}” (${jurisdiction}). Broad keyword matches are withheld; this does not establish that no requirements apply.`);
     }
-    if (catalog && state) await search("annual report", state, STATES[state], "annual_report");
-    const taxSources = input.operatingState ? await search("business tax registration", input.operatingState, STATES[input.operatingState], "state_tax") : [];
-    if (taxSources[0]?.nodeId && input.operatingState) {
-      const text = await call("law.get_node", { id: taxSources[0].nodeId });
-      const detail = text ? parseNode(text, taxSources[0].nodeId, STATES[input.operatingState]) : null;
-      if (detail) ledger.set(detail.id, detail);
-      else warnings.push("Full provision detail could not be verified; the search excerpt remains unresolved.");
-    }
+    if (catalog && state) await search("annual report", state, "annual_report");
+    if (input.operatingState) await search("business tax registration", input.operatingState, "state_tax");
     const coverage = input.operatingState && input.operatingCity ? await call("law.list_coverage", {}) : null;
     const local = coverage && input.operatingState ? exactLocalCoverage(coverage, input.operatingState, input.operatingCity) : null;
-    item("local", "local", local ? "Review local source matches" : "Local coverage needs checking", local
-      ? `Coverage confirms a searchable entry for ${local.name} (${local.code}); it does not establish which rules apply to this activity.`
+    item("local", "local", local ? "Local requirements need checking" : "Local coverage needs checking", local
+      ? `Coverage confirms a searchable entry for ${local.name} (${local.code}); it does not establish which rules apply to this activity. No relevant local provision was verified.`
       : "No exact, unambiguous, searchable coverage entry was confirmed for the operating city. Local requirements have not been determined.");
-    if (local) await search("business license", local.code, local.name, "local");
+    if (local) await search("business license", local.code, "local");
     else warnings.push("Local coverage gap: no local search was run.");
 
     const lines = catalog?.split("\n").filter(l => /^(?:PRICE(?: \(live\))?:|FOUNDING DISCOUNT:|EXPEDITE \(|SKIP REVIEW \(|TENNESSEE MEMBERS:|EIN ADD-ON: temporarily unavailable)/.test(l)) ?? [];

@@ -8,3 +8,8 @@ The source is Corpus base `bf1ed5de` plus the registered-agent quote correction
 pins these exact transcripts and requires regeneration when their format changes.
 Keep this copy synchronized with `apps/web/src/__tests__/fixtures/autopilot-hosted-transcripts.json`
 in Corpus; do not replace it with hand-written approximations.
+
+`irrelevant-plan-searches.json` contains synthetic negative controls shaped like
+hosted search transcripts. Education and insurance reports, aircraft registration,
+and dog licensing must never become supporting law for a software-business plan.
+These are parser-compatible test records, not verified legal citations or excerpts.

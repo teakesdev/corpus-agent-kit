@@ -6,6 +6,7 @@ import { exactLocalCoverage, parseNode, parseSearch } from "../src/plan-evidence
 import { hostedTool, bounded, MAX_TOOL_BYTES, UnsupportedFormationError } from "../src/plan-tools.js";
 import type { ToolCall } from "../src/plan-tools.js";
 import hostedTranscripts from "./fixtures/autopilot-hosted-transcripts.json";
+import irrelevantSearches from "./fixtures/irrelevant-plan-searches.json";
 
 const input: PlanInput = { mode: "ready", activity: "Fictional software business", formationState: "MS", operatingState: "TX", operatingCity: "Austin", entityType: "llc", campaign: {} };
 const catalog = `Formation requirements — LLC in MS (US-MS):
@@ -34,6 +35,25 @@ function fixture(overrides: Partial<Record<string, string>> = {}): ToolCall {
 afterEach(() => { vi.unstubAllGlobals(); vi.unstubAllEnvs(); vi.useRealTimers(); });
 
 describe("sourced planning", () => {
+  it("withholds unvetted education, insurance, aircraft and local matches while preserving source gaps", async () => {
+    const tool = vi.fn<ToolCall>(async (name, args) => name === "formation.requirements" ? catalog
+      : name === "law.list_coverage" ? "- MS-JXN — Jackson (municipal): 100 provisions, 80 searchable chunks"
+      : name === "law.search" ? args.query === "annual report" ? irrelevantSearches.annual_report
+        : args.query === "business tax registration" ? irrelevantSearches.state_tax : irrelevantSearches.local
+      : node());
+    const plan = await buildPlan({ ...input, operatingState: "MS", operatingCity: "Jackson" }, { tool });
+    expect(plan.sources.filter(s => s.kind === "law")).toEqual([]);
+    expect(plan.items.find(i => i.id === "annual_report")?.sourceIds).toEqual(["guide:annual"]);
+    expect(plan.items.find(i => i.id === "formation_duty_0")?.sourceIds).toEqual(["catalog:duty:0"]);
+    expect(plan.items.find(i => i.id === "state_tax")?.sourceIds).toEqual([]);
+    expect(plan.items.find(i => i.id === "local")?.sourceIds).toEqual([]);
+    expect(plan.items.find(i => i.id === "local")?.body).toContain("searchable entry for Jackson");
+    expect(plan.warnings.filter(w => w.includes("No relevant provision was verified"))).toHaveLength(3);
+    expect(plan.tools).toContain("law.list_coverage");
+    expect(tool.mock.calls.some(([name]) => name === "law.get_node")).toBe(false);
+    expect(plan.items.every(i => i.needsCheck)).toBe(true);
+    expect(JSON.stringify(plan)).not.toMatch(/Education achievement|Insurance society|Aircraft registration|Dog license/);
+  });
   it("rejects unsupported state and client-supplied sources", () => {
     expect(() => validatePlanInput({ ...input, formationState: "ZZ" })).toThrow();
     expect(() => validatePlanInput({ ...input, sources: [] })).toThrow();
@@ -72,12 +92,12 @@ describe("sourced planning", () => {
     expect(p.warnings.join(" ")).toContain("No entity type");
     expect(p.items.every(i => i.needsCheck)).toBe(true);
   });
-  it("binds only same-request sources and ignores model-injected citations", async () => {
+  it("binds curated sources only and ignores model-injected citations", async () => {
     const p = await buildPlan(input, { tool: fixture(), select: async () => ["ein", `law:${otherId}`, "MS § invented"] });
-    expect(p.sources.filter(s => s.kind === "law").map(s => s.nodeId)).toEqual([uuid, otherId]);
+    expect(p.sources.filter(s => s.kind === "law")).toEqual([]);
     expect(p.items[0].id).toBe("ein");
     expect(p.items.every(i => i.sourceIds.every(id => p.sources.some(s => s.id === id)))).toBe(true);
-    expect(p.sources.find(s => s.nodeId === uuid)).toMatchObject({ label: "Tax Code § 1", excerpt: "Full test provision.", url: `https://corpuslaw.us/code/${uuid}` });
+    expect(p.sources.find(s => s.id === "catalog:duty:0")?.excerpt).toBe("Annual report: confirm the current due date.");
     expect(JSON.stringify(p)).not.toContain("MS § invented");
     const second = await buildPlan(input, { tool: fixture({ "law.search": "No results found." }) });
     expect(second.sources.some(s => s.kind === "law")).toBe(false);
@@ -88,7 +108,8 @@ describe("sourced planning", () => {
     expect(tool.mock.calls.some(([n, a]) => n === "law.search" && a.jurisdiction === "TX")).toBe(true);
     expect(p.items.find(i => i.id === "state_tax")?.sourceIds).toEqual([]);
     expect(p.items.find(i => i.id === "state_tax")?.body).toContain("Operating state: TX");
-    expect(p.sources.filter(s => s.kind === "law")).toHaveLength(1); // MS search only
+    expect(tool.mock.calls.some(([n, a]) => n === "law.search" && a.jurisdiction === "MS")).toBe(true);
+    expect(p.sources.filter(s => s.kind === "law")).toHaveLength(0);
     expect(p.items.every(i => i.needsCheck)).toBe(true);
   });
   it.each(["", "- TX-AUS — Austin (municipal): PLACEHOLDER — listed but not yet searchable", "- TX-AUS — Austin (municipal): 100 provisions, 0 searchable chunks", "- CA-AUS — Austin (municipal): 100 provisions, 10 searchable chunks", "- TX-AUS — Austin City (municipal): 100 provisions, 10 searchable chunks", coverage + "\n- TX-AUS2 — Austin (municipal): 100 provisions, 10 searchable chunks"])("does not search local law without exact unambiguous searchable coverage: %s", async cov => {
@@ -139,10 +160,11 @@ describe("sourced planning", () => {
     expect(plan.items.find(i => i.id === "local")?.needsCheck).toBe(true);
     expect(plan.items.find(i => i.id === "local")?.body).toContain("does not establish which rules apply");
   });
-  it("uses a bounded six-tool budget", async () => {
+  it("uses five bounded tools without promoting a search hit to full provision evidence", async () => {
     const tool = vi.fn(fixture());
     await buildPlan(input, { tool });
-    expect(tool).toHaveBeenCalledTimes(6);
+    expect(tool).toHaveBeenCalledTimes(5);
+    expect(tool.mock.calls.some(([name]) => name === "law.get_node")).toBe(false);
   });
   it("cancels a hung tool and degrades deterministically", async () => {
     let observed: AbortSignal | undefined;
@@ -158,7 +180,7 @@ describe("sourced planning", () => {
     expect(p.items.length).toBeGreaterThanOrEqual(6);
     expect(p.tools).not.toContain("qwen.order_known_items");
   });
-  it("returns partial sourced output within 24 seconds for six 4.4-second tools and skips ordering", async () => {
+  it("returns curated output within 24 seconds for five 4.4-second tools and skips ordering", async () => {
     vi.useFakeTimers();
     const started = Date.now();
     const signals: AbortSignal[] = [];
@@ -171,15 +193,15 @@ describe("sourced planning", () => {
       });
       return fixture()(name, args, signal);
     }) as ReturnType<typeof vi.fn<ToolCall>>;
-    const pending = buildPlan(input, { tool, select });
+    let completedAt = 0;
+    const pending = buildPlan(input, { tool, select }).then(plan => { completedAt = Date.now(); return plan; });
     await vi.advanceTimersByTimeAsync(23500);
     const plan = await pending;
-    expect(Date.now() - started).toBe(23500);
-    expect(tool).toHaveBeenCalledTimes(6);
-    expect(signals.at(-1)?.aborted).toBe(true);
-    expect(signals.slice(0, -1).every(s => !s.aborted)).toBe(true);
+    expect(completedAt - started).toBe(22000);
+    expect(tool).toHaveBeenCalledTimes(5);
+    expect(signals.every(s => !s.aborted)).toBe(true);
     expect(plan.pricing.available).toBe(true);
-    expect(plan.sources.find(s => s.nodeId === uuid)?.excerpt).toBe("Full test provision.");
+    expect(plan.sources.some(s => s.kind === "law")).toBe(false);
     expect(plan.items.find(i => i.id === "local")?.sourceIds).toEqual([]);
     expect(plan.items.every(i => i.needsCheck)).toBe(true);
     expect(plan.warnings.join(" ")).toContain("Qwen ordering was skipped");
@@ -356,13 +378,15 @@ describe("real hosted formatter contract", () => {
     expect(exactLocalCoverage(hostedTranscripts.coverage, "CA", "San Diego")).toBeNull();
     expect(exactLocalCoverage(hostedTranscripts.coverage, "TX", "San Francisco, CA")).toBeNull();
   });
-  it("builds a sourced ready-mode plan from actual requirements and law transcripts", async () => {
+  it("keeps actual requirements but withholds unvetted alcohol-law search matches", async () => {
     const plan = await buildPlan({ ...input, operatingState: "MS", operatingCity: "" }, {
       tool: async name => name === "formation.requirements" ? hostedTranscripts.requirements
         : name === "law.search" ? hostedTranscripts.search : "No results found.",
     });
     expect(plan.items.find(i => i.id === "intake_0")?.body).toContain("- proposed business name");
-    expect(plan.items.find(i => i.id === "state_tax")?.sourceIds).toEqual(["law:089a2104-d704-4e93-8072-5bbbabc7ace6"]);
+    expect(plan.items.find(i => i.id === "state_tax")?.sourceIds).toEqual([]);
+    expect(plan.sources.some(s => s.kind === "law")).toBe(false);
+    expect(plan.warnings.join(" ")).toContain("No relevant provision was verified");
     expect(plan.pricing.available).toBe(true);
     expect(plan.pricing.lines).toEqual(hostedTranscripts.requirements.split("\n").filter(line => line.startsWith("PRICE (live):")));
     expect(plan.pricing.lines[0]).toContain("included in the Corpus bundle; state requirements vary");
