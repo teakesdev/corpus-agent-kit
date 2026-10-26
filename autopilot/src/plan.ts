@@ -70,7 +70,7 @@ export async function buildPlan(raw: PlanInput, deps: PlanDeps = {}, parent = ne
   return bounded(async signal => {
     const createdAt = new Date().toISOString();
     const tools: string[] = [];
-    const warnings = ["Source binding establishes provenance, not applicability or completeness. Search matches and unresolved items need checking."];
+    const warnings = ["Source binding establishes provenance, not applicability or completeness. Unresolved items need checking."];
     const call = requestTools(deps, signal, tools, warnings, deadline);
     const ledger = new Map<string, PlanSource>();
     const items: PlanItem[] = [];
