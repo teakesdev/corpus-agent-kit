@@ -139,5 +139,7 @@ compare byte-for-byte. Tools/models are mocked; no live metered call or filing o
 Web fixes separately preserve progress through refresh, use monotonic quote age and respect the
 public order-pause signal. The approved FC and matching web deployments are recorded above.
 Monitor shared free-tier credits and regulatory-notes cost during the article pilot; coverage caching
-is deferred. The 20-plan qualitative review remains open. Phase 2 token/email helpers in Corpus are
-foundations only; no public email or durable-resume endpoint is enabled.
+is deferred. The 20-plan qualitative review remains open. Corpus Phase 2 resume/delete
+endpoints are deployed and passed the public 404/200 fake-token smoke checks;
+the email-status endpoint reports disabled. The cleanup cron is registered, with
+scheduled-run success still pending. New email sending remains disabled pending checks.
