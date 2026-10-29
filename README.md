@@ -95,7 +95,7 @@ For **Claude Code**:
 
 ```
 /plugin marketplace add teakesdev/corpus-agent-kit
-/plugin install corpus@corpus-agent-kit
+/plugin install corpuslaw-formation@corpus-agent-kit
 ```
 
 Hermes installs the same bundle as an Agent Plugins v1 package

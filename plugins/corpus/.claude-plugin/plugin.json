@@ -1,16 +1,29 @@
 {
-  "name": "corpus",
-  "displayName": "Corpus",
+  "name": "corpuslaw-formation",
+  "displayName": "Corpus: Business Formation",
   "version": "0.1.0",
-  "description": "Search and cite US law from official sources, and run an LLC or nonprofit formation intake end to end.",
+  "description": "Form a US LLC or nonprofit with Claude: it runs the intake, checks the state's rules and live price, and gives the founder a prefilled Corpus link to review and pay. Includes a free law scan of state and federal law for the business. Also searches US law with verbatim citations from official sources.",
   "author": {
-    "name": "Corpus",
+    "name": "Renaissance AI Solutions",
     "url": "https://corpuslaw.us"
   },
   "homepage": "https://corpuslaw.us/agents",
   "repository": "https://github.com/teakesdev/corpus-agent-kit",
   "license": "Apache-2.0",
-  "keywords": ["legal", "law", "formation", "llc", "nonprofit", "compliance", "mcp"],
+  "keywords": [
+    "llc",
+    "llc-formation",
+    "form-an-llc",
+    "nonprofit",
+    "incorporate",
+    "business-formation",
+    "registered-agent",
+    "start-a-business",
+    "legal",
+    "law",
+    "compliance",
+    "mcp"
+  ],
   "mcpServers": {
     "corpus": {
       "type": "http",
