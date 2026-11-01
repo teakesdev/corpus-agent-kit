@@ -38,6 +38,11 @@ resources:
         # makes handoffs attributable — see tools/handoff.ts.
         CORPUS_API_KEY: ${env(CORPUS_API_KEY)}
         SPEND_CAP_TURNS_PER_HOUR: "120"
+      # Request logs. Without this FC keeps none, so a plan's cost could not be read back (corpus plan review,
+      # 2026-11-01). `auto` reuses the account's FC log project or creates it; src/request-log.ts writes one JSON
+      # line per /api/plan and /api/plan/handoff request (tool calls, Qwen tokens, status, duration; no activity,
+      # city or other free text). Set the logstore's retention to 30 days. See deploy/alibaba/README.md.
+      logConfig: auto
       code: ../..
       triggers:
         - triggerName: http

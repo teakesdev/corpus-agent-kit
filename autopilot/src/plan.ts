@@ -4,14 +4,17 @@ import { CAMPAIGN_KEYS, PlanError, validatePlanInput } from "./plan-validation.j
 import { exactLocalCoverage } from "./plan-evidence.js";
 import { getQwen } from "./qwen.js";
 import { lane } from "./routing.js";
+import { newMetrics, recordUsage, type PlanMetrics } from "./request-log.js";
 
-type Selector = (ids: string[], signal: AbortSignal, context: { input: PlanInput; items: Pick<PlanItem, "id" | "title" | "category">[] }) => Promise<unknown>;
+type Selector = (ids: string[], signal: AbortSignal, context: { input: PlanInput; items: Pick<PlanItem, "id" | "title" | "category">[] }, meter?: PlanMetrics) => Promise<unknown>;
 export interface PlanDeps {
   tool?: ToolCall;
   select?: Selector;
   toolTimeoutMs?: number;
   modelTimeoutMs?: number;
   timeoutMs?: number;
+  /** Called once, first, with the request's live counters, so the server can log them even if the request times out. */
+  onMetrics?: (metrics: PlanMetrics) => void;
 }
 const GUIDE = "https://corpuslaw.us/guides/after-forming-an-llc";
 const CHECKLIST = "https://corpuslaw.us/checklist";
@@ -24,7 +27,7 @@ const ENTITY = "An LLC, an EIN, and a registered agent are three different thing
 const FINISH_RESERVE_MS = 500;
 const MIN_TOOL_BUDGET_MS = 100;
 
-function requestTools(deps: PlanDeps, signal: AbortSignal, tools: string[], warnings: string[], deadline = Date.now() + PLAN_TIMEOUT_MS) {
+function requestTools(deps: PlanDeps, signal: AbortSignal, tools: string[], warnings: string[], deadline = Date.now() + PLAN_TIMEOUT_MS, metrics?: PlanMetrics) {
   let calls = 0;
   return async (name: ToolName, args: Record<string, unknown>): Promise<string | null> => {
     signal.throwIfAborted();
@@ -34,6 +37,7 @@ function requestTools(deps: PlanDeps, signal: AbortSignal, tools: string[], warn
       return null;
     }
     if (++calls > 6) throw new Error("Tool limit reached");
+    if (metrics) metrics.toolCalls = calls;
     try {
       const text = await bounded(s => (deps.tool ?? hostedTool)(name, args, s), signal, budget);
       if (typeof text !== "string" || !text.trim() || Buffer.byteLength(text) > MAX_TOOL_BYTES || /^Error:/i.test(text.trim())) throw new Error("Invalid tool text");
@@ -52,11 +56,13 @@ function requestTools(deps: PlanDeps, signal: AbortSignal, tools: string[], warn
   };
 }
 
-const selectKnown: Selector = async (ids, signal, context) => {
+const selectKnown: Selector = async (ids, signal, context, meter) => {
+  if (meter) meter.qwenCalls += 1;
   const response = await getQwen().chat.completions.create({
     model: lane("fast"), temperature: 0, max_tokens: 256,
     messages: [{ role: "system", content: "Return only a JSON array ordering the supplied item IDs. Do not add IDs, prose or sources." }, { role: "user", content: JSON.stringify({ ids, ...context }) }],
   }, { signal, timeout: 2000, maxRetries: 0 });
+  if (meter) recordUsage(meter, response.usage);
   const text = response.choices[0]?.message.content;
   if (!text || text.length > 4096) throw new Error("Invalid ordering");
   return JSON.parse(text);
@@ -64,14 +70,16 @@ const selectKnown: Selector = async (ids, signal, context) => {
 
 /** No user source records or model legal prose can enter the request-local ledger. */
 export async function buildPlan(raw: PlanInput, deps: PlanDeps = {}, parent = new AbortController().signal): Promise<PlanResponse> {
+  const metrics = newMetrics();
+  deps.onMetrics?.(metrics);
   const input = validatePlanInput(raw);
   const timeout = Math.min(deps.timeoutMs ?? PLAN_TIMEOUT_MS, PLAN_TIMEOUT_MS);
   const deadline = Date.now() + timeout;
   return bounded(async signal => {
     const createdAt = new Date().toISOString();
-    const tools: string[] = [];
+    const tools: string[] = metrics.tools;
     const warnings = ["Source binding establishes provenance, not applicability or completeness. Unresolved items need checking."];
-    const call = requestTools(deps, signal, tools, warnings, deadline);
+    const call = requestTools(deps, signal, tools, warnings, deadline, metrics);
     const ledger = new Map<string, PlanSource>();
     const items: PlanItem[] = [];
     function guide(id: string, label: string, url: string, excerpt: string) {
@@ -163,7 +171,7 @@ export async function buildPlan(raw: PlanInput, deps: PlanDeps = {}, parent = ne
       warnings.push("Qwen ordering was skipped to finish within the planning deadline; deterministic sourced items are shown.");
     } else if (selector) {
       try {
-        const selected = await bounded(s => selector(items.map(i => i.id), s, { input, items: items.map(({ id, title, category }) => ({ id, title, category })) }), signal, Math.min(deps.modelTimeoutMs ?? 2000, 2000));
+        const selected = await bounded(s => selector(items.map(i => i.id), s, { input, items: items.map(({ id, title, category }) => ({ id, title, category })) }, metrics), signal, Math.min(deps.modelTimeoutMs ?? 2000, 2000));
         if (!Array.isArray(selected) || selected.length > 20 || selected.some(id => typeof id !== "string")) throw new Error("Invalid selection");
         const known = new Set(items.map(i => i.id));
         const ids = [...new Set(selected.filter(id => known.has(id)))];
@@ -175,15 +183,19 @@ export async function buildPlan(raw: PlanInput, deps: PlanDeps = {}, parent = ne
         warnings.push("Qwen ordering was unavailable; deterministic sourced items are shown.");
       }
     } else warnings.push("Qwen ordering is not configured; deterministic sourced items are shown.");
+    metrics.itemCount = items.length;
+    metrics.warningCount = warnings.length;
     return { version: 1, createdAt, items, sources: [...ledger.values()], pricing, tools, warnings };
   }, parent, timeout);
 }
 
 export async function handoffPlan(raw: PlanInput, deps: PlanDeps = {}, parent = new AbortController().signal): Promise<PlanHandoff> {
+  const metrics = newMetrics();
+  deps.onMetrics?.(metrics);
   const input = validatePlanInput(raw);
   if (input.mode !== "ready" || !input.formationState || !input.entityType) throw new PlanError(400, "Choose ready mode, a formation state and an entity before continuing.");
   return bounded(async signal => {
-    const text = await requestTools(deps, signal, [], [])("formation.handoff", { entityType: input.entityType, state: input.formationState, ...(input.activity ? { businessActivity: input.activity } : {}) });
+    const text = await requestTools(deps, signal, metrics.tools, [], undefined, metrics)("formation.handoff", { entityType: input.entityType, state: input.formationState, ...(input.activity ? { businessActivity: input.activity } : {}) });
     if (!text) throw new PlanError(502, "Formation handoff is unavailable.");
     // Only an entire, bare URL line from the successful hosted tool is acceptable.
     const links = text.split("\n").map(l => l.trim()).filter(l => /^https?:\/\//.test(l));

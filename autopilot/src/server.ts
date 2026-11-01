@@ -6,6 +6,8 @@ import { runAutopilot } from "./agent.js";
 import { buildPlan, handoffPlan } from "./plan.js";
 import { PlanError, validatePlanInput } from "./plan-validation.js";
 import { bounded } from "./plan-tools.js";
+import { requestLogLine, type PlanMetrics } from "./request-log.js";
+import type { PlanInput } from "./plan-contract.js";
 
 const here = dirname(fileURLToPath(import.meta.url));
 // dist/server.js → ../public/index.html
@@ -17,6 +19,8 @@ interface Deps {
   handoff?: typeof handoffPlan;
   bodyTimeoutMs?: number;
   requestTimeoutMs?: number;
+  /** One line per plan/handoff request. Defaults to stdout, which FC ships to its log store once `logConfig` is set. */
+  log?: (line: string) => void;
 }
 
 export const MAX_PLAN_BODY_BYTES = 16384;
@@ -70,6 +74,11 @@ export function createServer(deps: Deps = {}): http.Server {
   }
   return http.createServer(async (req, res) => {
     const isPlan = req.url === "/api/plan" || req.url === "/api/plan/handoff";
+    const started = Date.now();
+    // What the request log line reports. status stays 0 if the client went away before an answer was written.
+    let logStatus = 0;
+    let logInput: PlanInput | undefined;
+    let metrics: PlanMetrics | undefined;
     const controller = new AbortController();
     const disconnect = () => controller.abort();
     req.once("aborted", disconnect);
@@ -100,16 +109,18 @@ export function createServer(deps: Deps = {}): http.Server {
       }
       if (req.method === "POST" && isPlan) {
         if (!underCap()) {
+          logStatus = 429;
           res.writeHead(429, { "Content-Type": "application/json", "Connection": "close" }).end(JSON.stringify({ error: "Hourly request cap reached — try again later." }));
           return;
         }
         const body = await readBody(req, MAX_PLAN_BODY_BYTES, Math.min(deps.bodyTimeoutMs ?? BODY_TIMEOUT_MS, BODY_TIMEOUT_MS), controller.signal);
         const input = validatePlanInput(body);
+        logInput = input;
         const execute = req.url === "/api/plan/handoff" ? deps.handoff ?? handoffPlan : deps.plan ?? buildPlan;
-        const result = await bounded<unknown>(s => execute(input, {}, s), controller.signal, Math.min(deps.requestTimeoutMs ?? 25000, 25000));
+        const result = await bounded<unknown>(s => execute(input, { onMetrics: m => { metrics = m; } }, s), controller.signal, Math.min(deps.requestTimeoutMs ?? 25000, 25000));
         const json = JSON.stringify(result);
         if (Buffer.byteLength(json) > MAX_PLAN_RESPONSE_BYTES) throw new PlanError(502, "Planning response is unavailable.");
-        if (!res.destroyed) res.writeHead(200, { "Content-Type": "application/json", "Cache-Control": "no-store" }).end(json);
+        if (!res.destroyed) { logStatus = 200; res.writeHead(200, { "Content-Type": "application/json", "Cache-Control": "no-store" }).end(json); }
         return;
       }
       if (req.method === "POST" && req.url === "/api/chat") {
@@ -138,12 +149,23 @@ export function createServer(deps: Deps = {}): http.Server {
     } catch (err) {
       if (res.destroyed) return;
       const status = err instanceof PlanError ? err.status : 500;
+      logStatus = status;
       const error = isPlan ? (err instanceof PlanError ? err.message : "Planning request failed.") : String(err instanceof Error ? err.message : err);
       res.writeHead(status, { "Content-Type": "application/json", "Cache-Control": "no-store", "Connection": "close" }).end(JSON.stringify({ error }));
       // For a rejected/incomplete body, release the paused socket after sending the error.
       if (!req.complete) res.once("finish", () => req.destroy());
     } finally {
       req.off("aborted", disconnect);
+      if (isPlan && req.method === "POST") {
+        try {
+          (deps.log ?? console.log)(requestLogLine({
+            route: req.url === "/api/plan/handoff" ? "handoff" : "plan",
+            status: logStatus || 499,
+            durationMs: Date.now() - started,
+            input: logInput, metrics,
+          }));
+        } catch { /* a log failure never changes the answer */ }
+      }
     }
   });
 }

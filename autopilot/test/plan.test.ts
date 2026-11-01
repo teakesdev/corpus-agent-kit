@@ -69,7 +69,7 @@ describe("sourced planning", () => {
     expect(validatePlanInput({ ...input, activity: "software\nconsulting\tshop" }).activity).toBe("software consulting shop");
     const select = vi.fn(async () => ["entity"]);
     const plan = await buildPlan(input, { tool: fixture(), select });
-    expect(select.mock.calls[0]).toEqual([expect.any(Array), expect.any(AbortSignal), expect.objectContaining({ input, items: expect.arrayContaining([expect.objectContaining({ id: "entity", category: "entity" })]) })]);
+    expect(select.mock.calls[0]).toEqual([expect.any(Array), expect.any(AbortSignal), expect.objectContaining({ input, items: expect.arrayContaining([expect.objectContaining({ id: "entity", category: "entity" })]) }), expect.objectContaining({ qwenCalls: 0, toolCalls: expect.any(Number) })]);
     expect(plan.items.find(i => i.id === "intake_0")?.body).toContain("proposed name");
     const formed = await buildPlan({ ...input, mode: "formed" }, { tool: fixture() });
     expect(formed.items.some(i => i.id.startsWith("intake_"))).toBe(false);
