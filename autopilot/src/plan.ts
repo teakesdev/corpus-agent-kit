@@ -10,6 +10,7 @@ import { exactLocalCoverage } from "./plan-evidence.js";
 import { getQwen } from "./qwen.js";
 import { lane } from "./routing.js";
 import { newMetrics, recordUsage, type PlanMetrics } from "./request-log.js";
+import { clampPlan, MAX_INTAKE_SECTIONS } from "./plan-limits.js";
 
 type Selector = (ids: string[], signal: AbortSignal, context: { input: PlanInput; items: Pick<PlanItem, "id" | "title" | "category">[]; naicsCandidates?: { code: string; title: string }[] }, meter?: PlanMetrics) => Promise<unknown>;
 /** How many of the lookup's candidates are shown when the model does not choose: the lookup's own best three. */
@@ -141,7 +142,9 @@ export async function buildPlan(raw: PlanInput, deps: PlanDeps = {}, parent = ne
         item("entity", "entity", input.mode === "formed" ? "Review the existing entity" : "Review the selected entity and formation state",
           `Your selection: ${input.entityType === "llc" ? "LLC" : "nonprofit corporation"} in ${STATES[state]} (${state}). ${ENTITY}`, [checklistEntity]);
         if (input.mode !== "formed") {
-          const sections = returned.split(/\n\n/).filter(section => section.startsWith("REQUIRED (") || section.startsWith(`STATE-SPECIFIC QUESTIONS for ${state} (`));
+          const allSections = returned.split(/\n\n/).filter(section => section.startsWith("REQUIRED (") || section.startsWith(`STATE-SPECIFIC QUESTIONS for ${state} (`));
+          const sections = allSections.slice(0, MAX_INTAKE_SECTIONS);
+          if (allSections.length > sections.length) warnings.push("Some formation intake fields could not be displayed; check the complete intake with Corpus before proceeding.");
           for (const [index, section] of sections.entries()) {
             const body = section.split("\n").filter(line => line.startsWith("- ")).join("\n");
             if (!body || body.length > 3000) {
@@ -256,7 +259,10 @@ export async function buildPlan(raw: PlanInput, deps: PlanDeps = {}, parent = ne
 
     /** Put the fixed non-US sources in the ledger and return their ids for an item. */
     function bindAbroad(ids: string[]): string[] {
-      for (const id of ids) ledger.set(id, { ...ABROAD_SOURCES[id] });
+      for (const id of ids) {
+        if (!ABROAD_SOURCES[id]) throw new Error(`Unknown non-US source: ${id}`);
+        ledger.set(id, { ...ABROAD_SOURCES[id] });
+      }
       return ids;
     }
     if (abroad) {
@@ -287,11 +293,13 @@ export async function buildPlan(raw: PlanInput, deps: PlanDeps = {}, parent = ne
     if (!(abroad && !input.operatingCity)) warnings.push(localWarning);
 
     const shownLines = priceAvailable ? lines.map(l => pricingLineForDisplay(l, abroad)) : [];
-    if (priceAvailable && abroad) shownLines.push(ABROAD_EIN_PRICING_LINE);
+    // The line points at the non-US EIN step, which only an LLC gets.
+    if (priceAvailable && abroad && input.entityType === "llc") shownLines.push(ABROAD_EIN_PRICING_LINE);
     const pricing = { available: priceAvailable, state, lines: shownLines, checkedAt: new Date().toISOString() };
-    metrics.itemCount = items.length;
-    metrics.warningCount = warnings.length;
-    return { version: 1, createdAt, items, sources: [...ledger.values()], pricing, tools, warnings };
+    const clamped = clampPlan(items, [...ledger.values()], warnings);
+    metrics.itemCount = clamped.items.length;
+    metrics.warningCount = clamped.warnings.length;
+    return { version: 1, createdAt, items: clamped.items, sources: clamped.sources, pricing, tools, warnings: clamped.warnings };
   }, parent, timeout);
 }
 

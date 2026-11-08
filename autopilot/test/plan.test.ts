@@ -3,7 +3,9 @@ import { buildPlan, handoffPlan } from "../src/plan.js";
 import { validatePlanInput } from "../src/plan-validation.js";
 import type { PlanInput } from "../src/plan-contract.js";
 import { exactLocalCoverage, parseNode, parseSearch } from "../src/plan-evidence.js";
-import { pricingLineForDisplay, parseNaicsCandidates, officeRuleFromCatalog, principalOfficeBody } from "../src/plan-abroad.js";
+import { ABROAD_SOURCES, pricingLineForDisplay, parseNaicsCandidates, officeRuleFromCatalog, principalOfficeBody } from "../src/plan-abroad.js";
+import { clampPlan, MAX_ITEMS, MAX_SOURCES, MAX_WARNINGS, MAX_WARNING_CHARS } from "../src/plan-limits.js";
+import type { PlanItem, PlanSource } from "../src/plan-contract.js";
 import { hostedTool, bounded, MAX_TOOL_BYTES, UnsupportedFormationError } from "../src/plan-tools.js";
 import type { ToolCall } from "../src/plan-tools.js";
 import type { PlanMetrics } from "../src/request-log.js";
@@ -582,6 +584,18 @@ describe("founder outside the US (request field)", () => {
     expect(p.sources.some(s => s.id.startsWith("guide:nonres") || s.id.startsWith("guide:irs-"))).toBe(false);
     expect(p.items.find(i => i.id === "state_tax")?.body).toContain("outside the US");
     expect(p.pricing.lines.join("\n")).not.toContain("Optional EIN add-on");
+    // The explanatory line points at the non-US EIN step, which a nonprofit does not get.
+    expect(p.pricing.available).toBe(true);
+    expect(p.pricing.lines.join("\n")).not.toContain("The EIN add-on isn't available");
+    expect(p.pricing.lines).toHaveLength(2);
+  });
+  it("fails loudly if a non-US source is missing from the table", async () => {
+    const saved = ABROAD_SOURCES["guide:irs-ss4"];
+    delete ABROAD_SOURCES["guide:irs-ss4"];
+    try {
+      await expect(buildPlan({ ...wyInput, ownerAbroad: true }, { tool: wyTool() })).rejects.toThrow("Unknown non-US source: guide:irs-ss4");
+    } finally { ABROAD_SOURCES["guide:irs-ss4"] = saved; }
+    await expect(buildPlan({ ...wyInput, ownerAbroad: true }, { tool: wyTool() })).resolves.toBeDefined();
   });
   it("skips the filing-time office item in formed mode but keeps EIN and Form 5472", async () => {
     const p = await buildPlan({ ...wyInput, mode: "formed", ownerAbroad: true }, { tool: wyTool() });
@@ -954,5 +968,88 @@ describe("local item for a founder abroad", () => {
     expect(p.items.find(i => i.id === "local")?.body).toBe("No exact, unambiguous, searchable coverage entry was confirmed for the operating city. Local requirements have not been determined.");
     expect(p.items.find(i => i.id === "local")?.needsCheck).toBe(true);
     expect(p.warnings).toContain("Local coverage gap: no local search was run.");
+  });
+});
+
+describe("ceilings below the web client's", () => {
+  // The web client throws the whole plan away past these: 40 items, 60 sources, 30 warnings, 500 characters a warning,
+  // 240-character titles, 3,000-character bodies, 400-character labels, 5,000-character excerpts, and any sourceId
+  // that is not in the sources list.
+  const webOk = (p: { items: PlanItem[]; sources: PlanSource[]; warnings: string[] }) => {
+    expect(p.items.length).toBeLessThanOrEqual(40);
+    expect(p.sources.length).toBeLessThanOrEqual(60);
+    expect(p.warnings.length).toBeLessThanOrEqual(30);
+    expect(p.warnings.every(w => w.length > 0 && w.length <= 500)).toBe(true);
+    expect(p.items.every(i => i.title.length <= 240 && i.body.trim().length > 0 && i.body.length <= 3000 && i.id.length <= 120)).toBe(true);
+    expect(p.sources.every(s => s.label.length <= 400 && s.excerpt.trim().length > 0 && s.excerpt.length <= 5000)).toBe(true);
+    expect(new Set(p.items.map(i => i.id)).size).toBe(p.items.length);
+    expect(new Set(p.sources.map(s => s.id)).size).toBe(p.sources.length);
+    expect(p.items.every(i => i.sourceIds.every(id => p.sources.some(s => s.id === id)))).toBe(true);
+  };
+  it("degrades a pathological catalog reply to a smaller plan instead of one the web would reject", async () => {
+    const required = Array.from({ length: 300 }, (_, i) => `REQUIRED (collect ALL of these ${i}):\n- field ${i}`).join("\n\n");
+    const stateSpecific = Array.from({ length: 300 }, (_, i) => `STATE-SPECIFIC QUESTIONS for WY (extra ${i}):\n- question ${i}`).join("\n\n");
+    const oversize = `REQUIRED (collect ALL of these big):\n- ${"x".repeat(3100)}`;
+    const duties = `AFTER-FORMATION DUTIES in WY — tell your user about these BEFORE they pay:\n${Array.from({ length: 400 }, (_, i) => `- Annual report duty ${i}: ${"d".repeat(40)}`).join("\n")}`;
+    // The real REQUIRED section stays first (the planner checks for it); hundreds of look-alikes follow.
+    const huge = wyCatalog.replace("- contact email", `- contact email\n\n${required}\n\n${oversize}\n\n${stateSpecific}\n\n${duties}`);
+    expect(Buffer.byteLength(huge)).toBeLessThan(131072);
+    for (const abroad of [false, true]) {
+      const p = await buildPlan({ ...wyInput, ownerAbroad: abroad }, { tool: wyTool({ "formation.requirements": huge }) });
+      webOk(p);
+      expect(p.items.length).toBeLessThanOrEqual(MAX_ITEMS);
+      expect(p.sources.length).toBeLessThanOrEqual(MAX_SOURCES);
+      expect(p.warnings.length).toBeLessThanOrEqual(MAX_WARNINGS);
+      expect(p.items.filter(i => i.id.startsWith("intake_"))).toHaveLength(3);
+      expect(p.items.filter(i => i.id.startsWith("formation_duty_"))).toHaveLength(4);
+      expect(p.warnings.filter(w => w.startsWith("Some formation intake fields could not be displayed"))).toHaveLength(1);
+      expect(p.pricing.available).toBe(true);
+    }
+  });
+  it("keeps every normal plan under the ceilings too, untouched", async () => {
+    for (const planInput of [wyInput, { ...wyInput, ownerAbroad: true }, { ...wyInput, mode: "exploring" as const }, input]) {
+      const p = await buildPlan(planInput, { tool: wyTool() });
+      webOk(p);
+      expect(p.items.length).toBeLessThan(MAX_ITEMS);
+    }
+  });
+  const item = (id: string, sourceIds: string[] = [], extra: Partial<PlanItem> = {}): PlanItem => ({ id, category: "entity", title: "t", body: "b", sourceIds, needsCheck: true, ...extra });
+  const source = (id: string, extra: Partial<PlanSource> = {}): PlanSource => ({ id, kind: "guide", label: "l", url: "https://corpuslaw.us/checklist", excerpt: "e", ...extra });
+  it("clampPlan returns an ordinary plan unchanged", () => {
+    const items = [item("a", ["s1"]), item("b", ["s2"])]; const sources = [source("s1"), source("s2")];
+    expect(clampPlan(items, sources, ["w1", "w2"])).toEqual({ items, sources, warnings: ["w1", "w2"] });
+  });
+  it("clampPlan keeps the first items and never leaves a dangling source id", () => {
+    const items = Array.from({ length: 100 }, (_, i) => item(`i${i}`, [`s${i}`]));
+    const sources = Array.from({ length: 100 }, (_, i) => source(`s${i}`));
+    const out = clampPlan(items, sources, []);
+    expect(out.items.map(i => i.id)).toEqual(items.slice(0, MAX_ITEMS).map(i => i.id));
+    expect(out.sources).toHaveLength(MAX_ITEMS); // 30 kept items reference 30 sources; the 70 others go
+    expect(out.items.every(i => i.sourceIds.every(id => out.sources.some(s => s.id === id)))).toBe(true);
+  });
+  it("clampPlan drops unreferenced sources before referenced ones, and unbinds an item whose source had to go", () => {
+    const items = [item("a", Array.from({ length: 50 }, (_, i) => `s${i}`))];
+    const sources = [...Array.from({ length: 10 }, (_, i) => source(`extra${i}`)), ...Array.from({ length: 50 }, (_, i) => source(`s${i}`))];
+    const out = clampPlan(items, sources, []);
+    expect(out.sources).toHaveLength(MAX_SOURCES);
+    expect(out.sources.some(s => s.id.startsWith("extra"))).toBe(false);
+    expect(out.items[0].sourceIds).toHaveLength(MAX_SOURCES);
+    expect(out.items[0].sourceIds.every(id => out.sources.some(s => s.id === id))).toBe(true);
+  });
+  it("clampPlan de-duplicates, truncates and caps warnings", () => {
+    const long = "w".repeat(2000);
+    const out = clampPlan([], [], ["same", "same", long, ...Array.from({ length: 60 }, (_, i) => `distinct ${i}`)]);
+    expect(out.warnings).toHaveLength(MAX_WARNINGS);
+    expect(out.warnings[0]).toBe("same");
+    expect(out.warnings[1]).toHaveLength(MAX_WARNING_CHARS);
+    expect(out.warnings[1].endsWith("…")).toBe(true);
+    expect(new Set(out.warnings).size).toBe(out.warnings.length);
+  });
+  it("clampPlan trims runaway titles, bodies, labels and excerpts", () => {
+    const out = clampPlan([item("a", ["s"], { title: "t".repeat(500), body: "b".repeat(9000) })], [source("s", { label: "l".repeat(900), excerpt: "e".repeat(9000) })], []);
+    expect(out.items[0].title).toHaveLength(240);
+    expect(out.items[0].body).toHaveLength(3000);
+    expect(out.sources[0].label).toHaveLength(400);
+    expect(out.sources[0].excerpt).toHaveLength(5000);
   });
 });
