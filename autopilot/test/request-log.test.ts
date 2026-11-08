@@ -16,7 +16,7 @@ import hostedTranscripts from "./fixtures/autopilot-hosted-transcripts.json";
 const PRIVATE_ACTIVITY = "PRIVATE_ACTIVITY_TOKEN custom lamps";
 const PRIVATE_CITY = "PRIVATE_CITY_TOKEN";
 const input: PlanInput = { mode: "ready", activity: PRIVATE_ACTIVITY, formationState: "MS", operatingState: "TX", operatingCity: PRIVATE_CITY, entityType: "llc", campaign: { utm_source: "PRIVATE_UTM" } };
-const tool: ToolCall = async name => name === "formation.requirements" ? hostedTranscripts.requirements : name === "law.list_coverage" ? hostedTranscripts.coverage : "No results found.";
+const tool: ToolCall = async name => name === "formation.requirements" ? hostedTranscripts.requirements : name === "law.list_coverage" ? hostedTranscripts.coverage : name === "formation.lookup_naics" ? `NAICS candidates for "x":\n- 541511 — Custom Computer Programming Services` : "No results found.";
 
 afterEach(() => { create.mockReset(); vi.unstubAllEnvs(); });
 
@@ -30,14 +30,15 @@ describe("PlanMetrics", () => {
   it("counts every hosted call attempted, failed ones too, and the items and warnings returned", async () => {
     let seen: PlanMetrics | undefined;
     const flaky: ToolCall = async (name, args, signal) => {
-      if (name === "law.search" && args.jurisdiction === "TX") throw new Error("upstream down");
+      if (name === "formation.lookup_naics") throw new Error("upstream down");
       return tool(name, args, signal);
     };
     const plan = await buildPlan(input, { tool: flaky, onMetrics: m => { seen = m; } });
-    // requirements, annual-report search (MS), business-tax search (TX, fails), coverage: 4 attempted.
-    expect(seen!.toolCalls).toBe(4);
+    // requirements, NAICS lookup (fails), coverage: 3 attempted; the unmatched city means no local search.
+    expect(seen!.toolCalls).toBe(3);
     expect(seen!.tools).toEqual(plan.tools);
     expect(seen!.tools).toContain("formation.requirements");
+    expect(seen!.tools).not.toContain("formation.lookup_naics");
     expect(seen!.itemCount).toBe(plan.items.length);
     expect(seen!.warningCount).toBe(plan.warnings.length);
     expect(seen!.qwenCalls).toBe(0);
@@ -102,6 +103,38 @@ describe("Qwen usage", () => {
   });
 });
 
+describe("the Qwen ownerAbroad flag, through the real ordering call", () => {
+  const flagged = (ownerAbroad: boolean, usage = { prompt_tokens: 100, completion_tokens: 20, total_tokens: 120 }) =>
+    ({ choices: [{ message: { content: JSON.stringify({ order: ["entity", "ein"], ownerAbroad }) } }], usage });
+
+  it("asks for one strict JSON object, keeps the 256-token, 2 s, no-retry limits, and applies a true flag", async () => {
+    useQwen();
+    create.mockResolvedValue(flagged(true));
+    let seen: PlanMetrics | undefined;
+    const plan = await buildPlan({ ...input, activity: "I live in Shanghai and sell apps" }, { tool, onMetrics: m => { seen = m; } });
+    expect(create).toHaveBeenCalledTimes(1);
+    const [body, options] = create.mock.calls[0]!;
+    expect(body).toMatchObject({ temperature: 0, max_tokens: 256 });
+    expect(options).toMatchObject({ timeout: 2000, maxRetries: 0 });
+    expect(body.messages[0].content).toContain('{"order":[');
+    expect(body.messages[0].content).toContain('"ownerAbroad":boolean');
+    expect(body.messages[0].content).toMatch(/outside the US/);
+    expect(JSON.parse(body.messages[1].content).input.activity).toBe("I live in Shanghai and sell apps");
+    expect(plan.items.find(i => i.id === "ein")!.body.startsWith("Your description suggests you're based outside the US. ")).toBe(true);
+    expect(plan.items.some(i => i.id === "form_5472")).toBe(true);
+    expect(seen).toMatchObject({ qwenCalls: 1, totalTokens: 120, ownerAbroad: true, ownerAbroadFromQwen: true });
+  });
+
+  it("keeps the old behavior when the answer is not the strict object", async () => {
+    useQwen();
+    for (const content of ['["entity","ein"]', '{"order":["entity"]}', "```json\n{\"order\":[],\"ownerAbroad\":true}\n```", '{"order":["entity"],"ownerAbroad":"yes"}']) {
+      create.mockResolvedValue({ choices: [{ message: { content } }] });
+      const plan = await buildPlan({ ...input, activity: "I live in Shanghai" }, { tool });
+      expect(plan.items.some(i => i.id === "form_5472")).toBe(false);
+    }
+  });
+});
+
 // The real request listener without sockets, as in server.test.ts.
 function client(deps: Parameters<typeof createServer>[0] = {}) {
   const server = createServer(deps);
@@ -148,15 +181,45 @@ describe("the request log line", () => {
     expect(c.lines[0]).not.toContain("\n");
     expect(c.lines[0]).not.toMatch(/PRIVATE_|custom lamps|"TX"|Austin/);
     expect(Object.keys(line).sort()).toEqual([
-      "duration_ms", "entity", "event", "formation_state", "item_count", "mode", "qwen_calls", "qwen_completion_tokens",
+      "duration_ms", "entity", "event", "formation_state", "item_count", "mode", "owner_abroad", "owner_abroad_from_qwen", "qwen_calls", "qwen_completion_tokens",
       "qwen_prompt_tokens", "qwen_total_tokens", "route", "status", "tool_calls", "tools", "ts", "warning_count",
     ]);
+  });
+
+  it("records ownerAbroad and whether Qwen set it, never the activity", async () => {
+    useQwen();
+    const plan = (raw: PlanInput, deps: object, signal: AbortSignal) => buildPlan(raw, { ...deps, tool }, signal);
+    const secret = "PRIVATE_ACTIVITY_TOKEN I live in Shanghai";
+    // Absent field, no flag from Qwen.
+    create.mockResolvedValue(ordering());
+    let c = logged({ plan });
+    await c.post("/api/plan", input);
+    expect(JSON.parse(c.lines[0]!)).toMatchObject({ owner_abroad: false, owner_abroad_from_qwen: false });
+    // Field in the request.
+    create.mockResolvedValue(ordering());
+    c = logged({ plan });
+    await c.post("/api/plan", { ...input, ownerAbroad: true });
+    expect(JSON.parse(c.lines[0]!)).toMatchObject({ owner_abroad: true, owner_abroad_from_qwen: false });
+    // Flag from Qwen.
+    create.mockResolvedValue({ choices: [{ message: { content: '{"order":["entity"],"ownerAbroad":true}' } }] });
+    c = logged({ plan });
+    await c.post("/api/plan", { ...input, activity: secret });
+    expect(JSON.parse(c.lines[0]!)).toMatchObject({ owner_abroad: true, owner_abroad_from_qwen: true });
+    expect(c.lines[0]).not.toMatch(/PRIVATE_|Shanghai/);
+    // A request that fails after validation still carries the field.
+    c = logged({ plan: async () => { throw new Error("boom"); } });
+    await c.post("/api/plan", { ...input, ownerAbroad: true });
+    expect(JSON.parse(c.lines[0]!)).toMatchObject({ status: 500, owner_abroad: true, owner_abroad_from_qwen: false });
+    // A rejected body does not.
+    c = logged();
+    await c.post("/api/plan", { ...input, ownerAbroad: "yes" });
+    expect(JSON.parse(c.lines[0]!)).toMatchObject({ status: 400, owner_abroad: false });
   });
 
   it("names the handoff route and its one hosted call", async () => {
     const c = logged({ handoff: (raw, deps, signal) => handoffPlan(raw, { ...deps, tool: async () => hostedTranscripts.handoff }, signal) });
     expect((await c.post("/api/plan/handoff", input)).status).toBe(200);
-    expect(JSON.parse(c.lines[0]!)).toMatchObject({ route: "handoff", status: 200, tool_calls: 1, qwen_calls: 0, tools: ["formation.handoff"] });
+    expect(JSON.parse(c.lines[0]!)).toMatchObject({ route: "handoff", status: 200, tool_calls: 1, qwen_calls: 0, tools: ["formation.handoff"], owner_abroad: false });
   });
 
   it("records a rejected input as its status, with no choices and no message", async () => {
@@ -186,7 +249,8 @@ describe("the request log line", () => {
     const c = logged({ requestTimeoutMs: 60, plan: (raw, deps, signal) => buildPlan(raw, { ...deps, tool: hang }, signal) });
     const res = await c.post("/api/plan", input);
     expect(res.status).toBeGreaterThanOrEqual(500);
-    expect(JSON.parse(c.lines[0]!)).toMatchObject({ tool_calls: 1, mode: "ready" });
+    // requirements and the NAICS lookup start together.
+    expect(JSON.parse(c.lines[0]!)).toMatchObject({ tool_calls: 2, mode: "ready" });
   });
 
   it("logs nothing for health checks, the page or the legacy chat route", async () => {

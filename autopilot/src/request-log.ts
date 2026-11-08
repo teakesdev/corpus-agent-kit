@@ -7,7 +7,8 @@
  *
  * Privacy: choices and counts only. The founder's activity and city are never logged, nor the operating state, the
  * campaign tags, any tool text, any plan text or any error message. The three choices (mode, entity, formation state)
- * are the same fields the web page sends to its own analytics.
+ * are the same fields the web page sends to its own analytics. `owner_abroad` is a yes/no, from the request
+ * or from the ordering call's reading of the activity; the activity it was read from is never kept.
  */
 import type { PlanInput } from "./plan-contract.js";
 
@@ -23,10 +24,15 @@ export interface PlanMetrics {
   totalTokens: number;
   itemCount: number;
   warningCount: number;
+  /** The founder is outside the US, whether the request said so or the Qwen flag did. */
+  ownerAbroad: boolean;
+  /** True only when the Qwen flag, not the request field, switched the non-US items on. */
+  ownerAbroadFromQwen: boolean;
 }
 
 export const newMetrics = (): PlanMetrics => ({
   toolCalls: 0, tools: [], qwenCalls: 0, promptTokens: 0, completionTokens: 0, totalTokens: 0, itemCount: 0, warningCount: 0,
+  ownerAbroad: false, ownerAbroadFromQwen: false,
 });
 
 /** The OpenAI-shaped `usage` block; DashScope's compatible mode returns the same three numbers. */
@@ -43,7 +49,7 @@ export interface RequestLogEntry {
   route: "plan" | "handoff";
   status: number;
   durationMs: number;
-  input?: Pick<PlanInput, "mode" | "entityType" | "formationState">;
+  input?: Pick<PlanInput, "mode" | "entityType" | "formationState" | "ownerAbroad">;
   metrics?: PlanMetrics;
 }
 
@@ -58,6 +64,8 @@ export function requestLogLine(entry: RequestLogEntry): string {
     mode: entry.input?.mode ?? null,
     entity: entry.input?.entityType ?? null,
     formation_state: entry.input?.formationState ?? null,
+    owner_abroad: m.ownerAbroad || entry.input?.ownerAbroad === true,
+    owner_abroad_from_qwen: m.ownerAbroadFromQwen,
     tool_calls: m.toolCalls,
     tools: m.tools,
     qwen_calls: m.qwenCalls,
