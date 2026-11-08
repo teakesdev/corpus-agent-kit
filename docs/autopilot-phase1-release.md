@@ -152,8 +152,10 @@ scheduled-run success still pending. New email sending remains disabled pending 
 ## 2026-11-07 release
 
 Branch `session/autopilot-article-fixes`, PR [#13](https://github.com/teakesdev/corpus-agent-kit/pull/13), first deployed
-at `158328c`; the review fixes that follow it (`42eba78`, `1c32250`, and this file) deploy next. Written for the Qwen
-article, whose readers are mostly outside the US.
+at `158328c`; the SWE-2 review fixes (`42eba78`, `1c32250`) are live since 2026-11-07 ~23:08 CST from `13ab1f6`
+(SWE-2 review: APPROVE WITH CHANGES, all findings fixed; the fix round was not re-reviewed). Written for the Qwen
+article, whose readers are mostly outside the US. Still open: the SLS logstore `default-logs` has no index and no
+30-day retention set, and the hosted MCP server is not warmed before the article (deliberately deferred).
 
 **What changed.** `POST /api/plan` takes an optional `ownerAbroad` boolean (absent means false). For a founder abroad,
 from that field or from the ordering call's reading of the activity, the plan swaps in a Form SS-4 EIN item, a Form 5472
@@ -175,10 +177,12 @@ ceilings: 30 items, 45 sources, 20 warnings of at most 480 characters.
 
 **Client IP probe, 2026-11-07.** FC passes the caller's own `X-Forwarded-For` through: 30 requests sent with
 `198.51.100.77` drew a 429 on the 31st, and a request with `198.51.100.78` then got a 400, not a 429, so a made-up
-header chose the bucket. The limiter therefore keys on the LAST entry, on the assumption that the gateway appends the
-address it saw. That is not yet confirmed. After deploying, send more than `PLAN_PER_IP_PER_HOUR` requests with a
-different made-up header each, from one host: the last should be a 429. If it is not, the per-IP limits protect
-nothing and only the process total does.
+header chose the bucket. The limiter therefore keys on the LAST entry, which the gateway appends. Confirmed after the
+`13ab1f6` deploy: 61 requests from one host, each with a different made-up header, drew 60 × 400 then a 429
+(2026-11-07). On 2026-11-08, after the Mac exhausted its 20 `/api/chat` requests (21st → 429), a request from a second
+host (the VPS) got a 400 and the Mac's next got a 429, so separate callers get separate buckets. Both probes sent
+non-JSON bodies, which return 400 before any Qwen or MCP call. Limits are per process, so a caller spread across
+several FC instances can exceed them by that factor.
 
 **Rollback.** Redeploy the previous FC code at `158328c`, or `cb3999ba` for the Phase 1 code. Both are code-only. The web
 allowlist additions are harmless to older plans. `SPEND_CAP_TURNS_PER_HOUR` is an environment variable and stays at

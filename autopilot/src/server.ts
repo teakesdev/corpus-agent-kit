@@ -52,12 +52,11 @@ function capFromEnv(name: string, fallback: number): number {
  * Why last: a live probe on 2026-11-07 showed FC passes the caller's OWN X-Forwarded-For through (30 requests sent with
  * XFF 198.51.100.77 drew a 429 on the 31st; a request with XFF 198.51.100.78 then got a 400, not a 429, so a made-up
  * header chose the bucket). Taking the first entry therefore lets a caller pick any bucket it likes. The gateway is
- * assumed to APPEND the address it actually saw, so the last entry is the one the caller cannot forge. That append
- * behavior has NOT been probed yet and must be re-probed after this deploys: send more than PLAN_PER_IP_PER_HOUR
- * requests, each with a different made-up XFF, from one host; the last one should draw a 429 (all share the gateway's
- * entry). If they do not, the gateway still passes the header through untouched and this limit protects nothing.
- * If instead every caller shares one bucket, the gateway's own address is the last entry and the per-IP limits have
- * become a second global cap.
+ * APPENDS the address it actually saw, so the last entry is the one the caller cannot forge. Probed after deploying
+ * this: 61 requests from one host, each with a different made-up XFF, drew 60 × 400 then a 429 (2026-11-07), so a
+ * forged header no longer picks the bucket; and on 2026-11-08 a host that had exhausted its /api/chat bucket kept
+ * drawing 429s while a second host got a 400, so separate callers get separate buckets (per process; FC may run
+ * several instances). If either probe ever flips, re-check this function first.
  * Without the header (local dev, tests) we fall back to the socket address. The address is held in memory for an hour
  * and never logged.
  */
