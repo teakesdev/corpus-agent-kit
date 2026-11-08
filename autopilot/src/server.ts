@@ -21,11 +21,66 @@ interface Deps {
   requestTimeoutMs?: number;
   /** One line per plan/handoff request. Defaults to stdout, which FC ships to its log store once `logConfig` is set. */
   log?: (line: string) => void;
+  /** Most distinct clients the per-IP limiter remembers at once (default 10,000); the oldest window is dropped past it. */
+  maxTrackedClients?: number;
 }
 
 export const MAX_PLAN_BODY_BYTES = 16384;
 export const MAX_PLAN_RESPONSE_BYTES = 98304;
 const BODY_TIMEOUT_MS = 5000;
+
+const HOUR_MS = 3_600_000;
+// Per-process budgets (FC may run several instances; each counts alone). Env overrides keep them tunable without a deploy of code.
+const DEFAULT_GLOBAL_CAP = 600;
+const DEFAULT_PLAN_PER_IP = 30;
+const DEFAULT_HANDOFF_PER_IP = 60;
+const DEFAULT_MAX_TRACKED_CLIENTS = 10_000;
+
+function capFromEnv(name: string, fallback: number): number {
+  const raw = process.env[name];
+  if (raw === undefined || raw === "") return fallback;
+  const n = Number(raw);
+  return Number.isFinite(n) && n >= 0 ? n : fallback;
+}
+
+/**
+ * Who is calling. The function sits behind FC's HTTP gateway, so the socket's remote address is the gateway, not the
+ * caller; the caller's address has to come from X-Forwarded-For. ASSUMPTION (not verified against a live FC request):
+ * FC's gateway sets that header, and we take its FIRST entry as the client. A caller who sends its own X-Forwarded-For
+ * can therefore choose its bucket, so this limit only stops casual repetition; the per-process global cap is the real
+ * ceiling. If FC turns out to append the real address instead, the last entry is the one to trust. Without the header
+ * (local dev, tests) we fall back to the socket address. The address is held in memory for an hour and never logged.
+ */
+export function clientIp(req: Pick<http.IncomingMessage, "headers" | "socket">): string {
+  const header = req.headers["x-forwarded-for"];
+  const first = (Array.isArray(header) ? header[0] : header)?.split(",")[0]?.trim().toLowerCase().replace(/^(\d{1,3}(?:\.\d{1,3}){3}):\d+$/, "$1");
+  if (first && /^[0-9a-f:.]{2,45}$/.test(first)) return first;
+  return req.socket?.remoteAddress ?? "unknown";
+}
+
+/**
+ * Hits per key in a fixed one-hour window. Memory is bounded: past `max` keys the oldest window is dropped, and
+ * expired windows are always the oldest, because insertion order is window-start order (a key is re-inserted when its
+ * window rolls over).
+ */
+class HourlyCounter {
+  private windows = new Map<string, { start: number; count: number }>();
+  constructor(private max: number) {}
+  /** Counts one hit; false once the key has used up `limit` hits in its current hour. */
+  hit(key: string, limit: number, now = Date.now()): boolean {
+    let w = this.windows.get(key);
+    if (w && now - w.start > HOUR_MS) { this.windows.delete(key); w = undefined; }
+    if (!w) {
+      while (this.windows.size >= Math.max(1, this.max)) {
+        const oldest = this.windows.entries().next().value as [string, { start: number }];
+        this.windows.delete(oldest[0]);
+      }
+      w = { start: now, count: 0 };
+      this.windows.set(key, w);
+    }
+    return ++w.count <= limit;
+  }
+}
 
 /** Event-based reader stops buffering immediately on size, disconnect or deadline. */
 function readBody(req: http.IncomingMessage, limit: number, timeoutMs: number, signal: AbortSignal): Promise<unknown> {
@@ -65,12 +120,19 @@ export function createServer(deps: Deps = {}): http.Server {
   let windowStart = Date.now();
   let turnsThisWindow = 0;
   function underCap(): boolean {
-    const cap = Number(process.env.SPEND_CAP_TURNS_PER_HOUR || 120);
-    if (Date.now() - windowStart > 3_600_000) {
+    const cap = capFromEnv("SPEND_CAP_TURNS_PER_HOUR", DEFAULT_GLOBAL_CAP);
+    if (Date.now() - windowStart > HOUR_MS) {
       windowStart = Date.now();
       turnsThisWindow = 0;
     }
     return ++turnsThisWindow <= cap;
+  }
+  // Per client, plan and handoff counted apart because their budgets differ. Checked BEFORE the global cap so that one
+  // caller who is already over its own limit cannot spend the whole process's budget.
+  const perClient = new HourlyCounter(deps.maxTrackedClients ?? DEFAULT_MAX_TRACKED_CLIENTS);
+  function clientAllowed(route: "plan" | "handoff", ip: string): boolean {
+    const limit = route === "handoff" ? capFromEnv("HANDOFF_PER_IP_PER_HOUR", DEFAULT_HANDOFF_PER_IP) : capFromEnv("PLAN_PER_IP_PER_HOUR", DEFAULT_PLAN_PER_IP);
+    return perClient.hit(`${route}:${ip}`, limit);
   }
   return http.createServer(async (req, res) => {
     const isPlan = req.url === "/api/plan" || req.url === "/api/plan/handoff";
@@ -108,7 +170,7 @@ export function createServer(deps: Deps = {}): http.Server {
         return;
       }
       if (req.method === "POST" && isPlan) {
-        if (!underCap()) {
+        if (!clientAllowed(req.url === "/api/plan/handoff" ? "handoff" : "plan", clientIp(req)) || !underCap()) {
           logStatus = 429;
           res.writeHead(429, { "Content-Type": "application/json", "Connection": "close" }).end(JSON.stringify({ error: "Hourly request cap reached — try again later." }));
           return;
