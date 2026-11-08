@@ -276,8 +276,9 @@ cp .env.example .env
 | `CORPUS_BASE_URL` | `https://corpuslaw.us` | Hosted Corpus platform base URL |
 | `CORPUS_API_KEY` | _(optional)_ | Corpus platform API key (optional — anonymous is rate-limited) |
 | `SPEND_CAP_TURNS_PER_HOUR` | `600` | Abuse guard: max requests per hour per process, shared by plan, handoff and chat |
-| `PLAN_PER_IP_PER_HOUR` | `30` | Abuse guard: max `/api/plan` requests per hour per client IP (from `X-Forwarded-For`) |
-| `HANDOFF_PER_IP_PER_HOUR` | `60` | Abuse guard: max `/api/plan/handoff` requests per hour per client IP |
+| `PLAN_PER_IP_PER_HOUR` | `60` | Abuse guard: max `/api/plan` requests per hour per client IP (last `X-Forwarded-For` entry) |
+| `HANDOFF_PER_IP_PER_HOUR` | `120` | Abuse guard: max `/api/plan/handoff` requests per hour per client IP |
+| `CHAT_PER_IP_PER_HOUR` | `20` | Abuse guard: max `/api/chat` requests per hour per client IP |
 | `PORT` | `9000` | HTTP server port (autopilot backend) |
 
 ### autopilot — Formation Autopilot agent

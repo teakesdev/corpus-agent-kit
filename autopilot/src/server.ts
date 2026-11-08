@@ -32,8 +32,10 @@ const BODY_TIMEOUT_MS = 5000;
 const HOUR_MS = 3_600_000;
 // Per-process budgets (FC may run several instances; each counts alone). Env overrides keep them tunable without a deploy of code.
 const DEFAULT_GLOBAL_CAP = 600;
-const DEFAULT_PLAN_PER_IP = 30;
-const DEFAULT_HANDOFF_PER_IP = 60;
+// Per-IP defaults are generous on purpose: one address is often a whole office, campus or carrier-grade NAT.
+const DEFAULT_PLAN_PER_IP = 60;
+const DEFAULT_HANDOFF_PER_IP = 120;
+const DEFAULT_CHAT_PER_IP = 20;
 const DEFAULT_MAX_TRACKED_CLIENTS = 10_000;
 
 function capFromEnv(name: string, fallback: number): number {
@@ -45,16 +47,25 @@ function capFromEnv(name: string, fallback: number): number {
 
 /**
  * Who is calling. The function sits behind FC's HTTP gateway, so the socket's remote address is the gateway, not the
- * caller; the caller's address has to come from X-Forwarded-For. ASSUMPTION (not verified against a live FC request):
- * FC's gateway sets that header, and we take its FIRST entry as the client. A caller who sends its own X-Forwarded-For
- * can therefore choose its bucket, so this limit only stops casual repetition; the per-process global cap is the real
- * ceiling. If FC turns out to append the real address instead, the last entry is the one to trust. Without the header
- * (local dev, tests) we fall back to the socket address. The address is held in memory for an hour and never logged.
+ * caller; the caller's address has to come from X-Forwarded-For, and we take its LAST entry.
+ *
+ * Why last: a live probe on 2026-11-07 showed FC passes the caller's OWN X-Forwarded-For through (30 requests sent with
+ * XFF 198.51.100.77 drew a 429 on the 31st; a request with XFF 198.51.100.78 then got a 400, not a 429, so a made-up
+ * header chose the bucket). Taking the first entry therefore lets a caller pick any bucket it likes. The gateway is
+ * assumed to APPEND the address it actually saw, so the last entry is the one the caller cannot forge. That append
+ * behavior has NOT been probed yet and must be re-probed after this deploys: send more than PLAN_PER_IP_PER_HOUR
+ * requests, each with a different made-up XFF, from one host; the last one should draw a 429 (all share the gateway's
+ * entry). If they do not, the gateway still passes the header through untouched and this limit protects nothing.
+ * If instead every caller shares one bucket, the gateway's own address is the last entry and the per-IP limits have
+ * become a second global cap.
+ * Without the header (local dev, tests) we fall back to the socket address. The address is held in memory for an hour
+ * and never logged.
  */
 export function clientIp(req: Pick<http.IncomingMessage, "headers" | "socket">): string {
   const header = req.headers["x-forwarded-for"];
-  const first = (Array.isArray(header) ? header[0] : header)?.split(",")[0]?.trim().toLowerCase().replace(/^(\d{1,3}(?:\.\d{1,3}){3}):\d+$/, "$1");
-  if (first && /^[0-9a-f:.]{2,45}$/.test(first)) return first;
+  const entries = (Array.isArray(header) ? header.join(",") : header ?? "").split(",").map(e => e.trim()).filter(Boolean);
+  const last = entries.at(-1)?.toLowerCase().replace(/^(\d{1,3}(?:\.\d{1,3}){3}):\d+$/, "$1");
+  if (last && /^[0-9a-f:.]{2,45}$/.test(last)) return last;
   return req.socket?.remoteAddress ?? "unknown";
 }
 
@@ -130,8 +141,10 @@ export function createServer(deps: Deps = {}): http.Server {
   // Per client, plan and handoff counted apart because their budgets differ. Checked BEFORE the global cap so that one
   // caller who is already over its own limit cannot spend the whole process's budget.
   const perClient = new HourlyCounter(deps.maxTrackedClients ?? DEFAULT_MAX_TRACKED_CLIENTS);
-  function clientAllowed(route: "plan" | "handoff", ip: string): boolean {
-    const limit = route === "handoff" ? capFromEnv("HANDOFF_PER_IP_PER_HOUR", DEFAULT_HANDOFF_PER_IP) : capFromEnv("PLAN_PER_IP_PER_HOUR", DEFAULT_PLAN_PER_IP);
+  function clientAllowed(route: "plan" | "handoff" | "chat", ip: string): boolean {
+    const limit = route === "handoff" ? capFromEnv("HANDOFF_PER_IP_PER_HOUR", DEFAULT_HANDOFF_PER_IP)
+      : route === "chat" ? capFromEnv("CHAT_PER_IP_PER_HOUR", DEFAULT_CHAT_PER_IP)
+      : capFromEnv("PLAN_PER_IP_PER_HOUR", DEFAULT_PLAN_PER_IP);
     return perClient.hit(`${route}:${ip}`, limit);
   }
   return http.createServer(async (req, res) => {
@@ -186,7 +199,7 @@ export function createServer(deps: Deps = {}): http.Server {
         return;
       }
       if (req.method === "POST" && req.url === "/api/chat") {
-        if (!underCap()) {
+        if (!clientAllowed("chat", clientIp(req)) || !underCap()) {
           res.writeHead(429, { "Content-Type": "application/json" }).end(JSON.stringify({ error: "Hourly budget cap reached — try again later." }));
           return;
         }

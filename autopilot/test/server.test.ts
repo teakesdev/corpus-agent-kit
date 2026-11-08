@@ -131,21 +131,21 @@ describe("rate limits", () => {
   const ip = (address: string) => ({ "x-forwarded-for": address });
   const capBody = { error: "Hourly request cap reached — try again later." };
 
-  it("defaults to 30 plan requests per hour per IP, then 429 with the unchanged body", async () => {
+  it("defaults to 60 plan requests per hour per IP, then 429 with the unchanged body", async () => {
     const c = client({ plan: ok });
-    for (let i = 0; i < 30; i++) expect((await c.post("/api/plan", input, ip("203.0.113.7"))).status).toBe(200);
+    for (let i = 0; i < 60; i++) expect((await c.post("/api/plan", input, ip("203.0.113.7"))).status).toBe(200);
     const blocked = await c.post("/api/plan", input, ip("203.0.113.7"));
     expect(blocked.status).toBe(429);
     expect(await blocked.json()).toEqual(capBody);
     expect(blocked.headers.get("connection")).toBe("close");
     expect((await c.post("/api/plan", input, ip("203.0.113.8"))).status).toBe(200);
   });
-  it("defaults to 60 handoff requests per hour per IP, counted apart from plan", async () => {
+  it("defaults to 120 handoff requests per hour per IP, counted apart from plan", async () => {
     const handoff = async () => ({ url: "https://corpuslaw.us/formation#prefill=t", missing: [] });
     const c = client({ plan: ok, handoff });
-    for (let i = 0; i < 30; i++) await c.post("/api/plan", input, ip("203.0.113.7"));
+    for (let i = 0; i < 60; i++) await c.post("/api/plan", input, ip("203.0.113.7"));
     expect((await c.post("/api/plan", input, ip("203.0.113.7"))).status).toBe(429);
-    for (let i = 0; i < 60; i++) expect((await c.post("/api/plan/handoff", input, ip("203.0.113.7"))).status).toBe(200);
+    for (let i = 0; i < 120; i++) expect((await c.post("/api/plan/handoff", input, ip("203.0.113.7"))).status).toBe(200);
     expect((await c.post("/api/plan/handoff", input, ip("203.0.113.7"))).status).toBe(429);
   });
   it("can be tuned by environment", async () => {
@@ -182,20 +182,51 @@ describe("rate limits", () => {
     expect((await c.post("/api/plan", input, ip("10.9.9.9"))).status).toBe(429);
     expect((await c.post("/api/chat", messages)).status).toBe(429);
   });
-  it("does not apply the per-IP limit to chat, health or OPTIONS", async () => {
-    vi.stubEnv("PLAN_PER_IP_PER_HOUR", "1");
-    const c = client({ run: async () => ({ reply: "x", toolCalls: [] }) });
-    for (let i = 0; i < 5; i++) expect((await c.post("/api/chat", messages, ip("198.51.100.1"))).status).toBe(200);
-    expect((await c.request("/healthz", { method: "GET", headers: ip("198.51.100.1") }).response).status).toBe(200);
-    expect((await c.request("/api/plan", { method: "OPTIONS", headers: ip("198.51.100.1") }).response).status).toBe(204);
+  it("limits chat per IP too: 20 an hour by default, counted apart from plan, with chat's own 429 body", async () => {
+    const c = client({ plan: ok, run: async () => ({ reply: "x", toolCalls: [] }) });
+    for (let i = 0; i < 20; i++) expect((await c.post("/api/chat", messages, ip("203.0.113.7"))).status).toBe(200);
+    const blocked = await c.post("/api/chat", messages, ip("203.0.113.7"));
+    expect(blocked.status).toBe(429);
+    expect(await blocked.json()).toEqual({ error: "Hourly budget cap reached — try again later." });
+    expect((await c.post("/api/chat", messages, ip("203.0.113.8"))).status).toBe(200);
+    expect((await c.post("/api/plan", input, ip("203.0.113.7"))).status).toBe(200); // plan has its own counter
   });
-  it("buckets by the FIRST X-Forwarded-For entry and ignores the rest of the chain", async () => {
+  it("tunes chat by CHAT_PER_IP_PER_HOUR and checks it before the process budget", async () => {
+    vi.stubEnv("CHAT_PER_IP_PER_HOUR", "1"); vi.stubEnv("SPEND_CAP_TURNS_PER_HOUR", "2");
+    const run = vi.fn(async () => ({ reply: "x", toolCalls: [] }));
+    const c = client({ run });
+    expect((await c.post("/api/chat", messages, ip("198.51.100.1"))).status).toBe(200); // global 1
+    for (let i = 0; i < 10; i++) expect((await c.post("/api/chat", messages, ip("198.51.100.1"))).status).toBe(429); // none counted
+    expect((await c.post("/api/chat", messages, ip("198.51.100.2"))).status).toBe(200); // global 2
+    expect((await c.post("/api/chat", messages, ip("198.51.100.3"))).status).toBe(429); // global exhausted
+    expect(run).toHaveBeenCalledTimes(2);
+  });
+  it("does not apply any per-IP limit to health or OPTIONS", async () => {
+    vi.stubEnv("PLAN_PER_IP_PER_HOUR", "1"); vi.stubEnv("CHAT_PER_IP_PER_HOUR", "1");
+    const c = client({});
+    for (let i = 0; i < 5; i++) {
+      expect((await c.request("/healthz", { method: "GET", headers: ip("198.51.100.1") }).response).status).toBe(200);
+      expect((await c.request("/api/plan", { method: "OPTIONS", headers: ip("198.51.100.1") }).response).status).toBe(204);
+    }
+  });
+  it("buckets by the LAST X-Forwarded-For entry: forged first entries share the gateway's bucket", async () => {
     vi.stubEnv("PLAN_PER_IP_PER_HOUR", "1");
     const c = client({ plan: ok });
-    expect((await c.post("/api/plan", input, ip("198.51.100.1, 10.0.0.9"))).status).toBe(200);
-    expect((await c.post("/api/plan", input, ip("198.51.100.1, 10.0.0.10"))).status).toBe(429);
-    expect((await c.post("/api/plan", input, ip("198.51.100.1:5555"))).status).toBe(429);
-    expect((await c.post("/api/plan", input, ip("198.51.100.2, 198.51.100.1"))).status).toBe(200);
+    expect((await c.post("/api/plan", input, ip("198.51.100.1, 203.0.113.9"))).status).toBe(200);
+    // Different spoofed first entries, same entry appended by the gateway: one bucket.
+    expect((await c.post("/api/plan", input, ip("198.51.100.2, 203.0.113.9"))).status).toBe(429);
+    expect((await c.post("/api/plan", input, ip("6.6.6.6, 7.7.7.7, 203.0.113.9"))).status).toBe(429);
+    expect((await c.post("/api/plan", input, ip("203.0.113.9"))).status).toBe(429);
+    expect((await c.post("/api/plan", input, ip("203.0.113.9:5555"))).status).toBe(429);
+    // A different gateway entry is a different caller, whatever the first entry says.
+    expect((await c.post("/api/plan", input, ip("198.51.100.1, 203.0.113.10"))).status).toBe(200);
+  });
+  it("cannot be talked out of its bucket by thirty forged addresses", async () => {
+    vi.stubEnv("PLAN_PER_IP_PER_HOUR", "3");
+    const c = client({ plan: ok });
+    const statuses: number[] = [];
+    for (let i = 0; i < 6; i++) statuses.push((await c.post("/api/plan", input, ip(`10.0.0.${i}, 203.0.113.50`))).status);
+    expect(statuses).toEqual([200, 200, 200, 429, 429, 429]);
   });
   it("forgets a caller after an hour", async () => {
     vi.useFakeTimers();
@@ -216,13 +247,17 @@ describe("rate limits", () => {
     expect((await c.post("/api/plan", input, ip("198.51.100.3"))).status).toBe(429);
     expect((await c.post("/api/plan", input, ip("198.51.100.1"))).status).toBe(200);
   });
-  it("falls back to the socket address, then to one shared bucket, when the header is absent or junk", () => {
+  it("reads the last entry, and falls back to the socket address, then to one shared bucket, when it is absent or junk", () => {
+    expect(clientIp({ headers: { "x-forwarded-for": "198.51.100.1, 10.0.0.9" }, socket: { remoteAddress: "192.0.2.5" } as never })).toBe("10.0.0.9");
+    expect(clientIp({ headers: { "x-forwarded-for": "203.0.113.9" }, socket: {} as never })).toBe("203.0.113.9");
+    expect(clientIp({ headers: { "x-forwarded-for": "a, b, 203.0.113.9 " }, socket: {} as never })).toBe("203.0.113.9");
+    expect(clientIp({ headers: { "x-forwarded-for": "203.0.113.9, " }, socket: {} as never })).toBe("203.0.113.9");
     expect(clientIp({ headers: {}, socket: { remoteAddress: "192.0.2.5" } as never })).toBe("192.0.2.5");
-    expect(clientIp({ headers: { "x-forwarded-for": "not an ip" }, socket: { remoteAddress: "192.0.2.5" } as never })).toBe("192.0.2.5");
+    expect(clientIp({ headers: { "x-forwarded-for": "198.51.100.1, not an ip" }, socket: { remoteAddress: "192.0.2.5" } as never })).toBe("192.0.2.5");
     expect(clientIp({ headers: { "x-forwarded-for": "" }, socket: { remoteAddress: "192.0.2.5" } as never })).toBe("192.0.2.5");
     expect(clientIp({ headers: {}, socket: undefined as never })).toBe("unknown");
-    expect(clientIp({ headers: { "x-forwarded-for": "2001:DB8::1, 10.0.0.1" }, socket: {} as never })).toBe("2001:db8::1");
-    expect(clientIp({ headers: { "x-forwarded-for": ["203.0.113.9, 10.0.0.1", "x"] }, socket: {} as never })).toBe("203.0.113.9");
+    expect(clientIp({ headers: { "x-forwarded-for": "10.0.0.1, 2001:DB8::1" }, socket: {} as never })).toBe("2001:db8::1");
+    expect(clientIp({ headers: { "x-forwarded-for": ["1.1.1.1, 10.0.0.1", "203.0.113.9"] }, socket: {} as never })).toBe("203.0.113.9");
   });
   it("logs a per-IP refusal as 429 without the address", async () => {
     vi.stubEnv("PLAN_PER_IP_PER_HOUR", "1");
