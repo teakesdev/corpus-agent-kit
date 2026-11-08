@@ -44,7 +44,10 @@ resources:
       # 2026-11-01). `auto` reuses the account's FC log project or creates it; src/request-log.ts writes one JSON
       # line per /api/plan and /api/plan/handoff request (tool calls, Qwen tokens, status, duration; no activity,
       # city or other free text). Set the logstore's retention to 30 days. See deploy/alibaba/README.md.
-      logConfig: auto
+      # `auto` created this project and logstore on the 2026-11-07 deploy; pinned so later deploys reuse them.
+      logConfig:
+        project: serverless-us-west-1-6de9fcef-7437-56d8-9cbe-0163f9c6ff20
+        logstore: default-logs
       code: ../..
       triggers:
         - triggerName: http
