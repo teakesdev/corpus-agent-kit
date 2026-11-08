@@ -1,7 +1,8 @@
 import type { PlanInput, PlanResponse, PlanHandoff, PlanItem, PlanSource } from "./plan-contract.js";
 import {
-  ABROAD_EIN, ABROAD_EIN_PRICING_LINE, ABROAD_EIN_TITLE, ABROAD_FLAG_NOTE, ABROAD_STATE_TAX, FORM_5472, FORM_5472_TITLE,
-  officeRuleFromCatalog, parseNaicsCandidates, pricingLineForDisplay, principalOfficeBody, PRINCIPAL_OFFICE_TITLE,
+  ABROAD_EIN, ABROAD_EIN_PRICING_LINE, ABROAD_EIN_SOURCE_IDS, ABROAD_EIN_TITLE, ABROAD_FLAG_NOTE, ABROAD_SOURCES, ABROAD_STATE_TAX,
+  FORM_5472, FORM_5472_SOURCE_IDS, FORM_5472_TITLE, officeRuleFromCatalog, parseNaicsCandidates, pricingLineForDisplay,
+  principalOfficeBody, PRINCIPAL_OFFICE_SOURCE_IDS, PRINCIPAL_OFFICE_TITLE,
 } from "./plan-abroad.js";
 import { bounded, hostedTool, MAX_TOOL_BYTES, PLAN_TIMEOUT_MS, TOOL_TIMEOUT_MS, UnsupportedFormationError, type ToolCall, type ToolName } from "./plan-tools.js";
 import { CAMPAIGN_KEYS, PlanError, record, STATES, validatePlanInput, type ValidPlanInput } from "./plan-validation.js";
@@ -180,23 +181,16 @@ export async function buildPlan(raw: PlanInput, deps: PlanDeps = {}, parent = ne
       ? `Operating state: ${input.operatingState}. Tax registration applicability has not been determined. Check the rules using the actual activity and tax situation.`
       : "Operating state is not selected. Tax registration applicability has not been determined.");
 
-    // Only the local lookup still searches. The annual-report and state-tax searches were removed: their results were
-    // always discarded, so they cost two sequential tool calls and a "law.search was unavailable" warning for nothing.
-    async function search(query: string, jurisdiction: string, itemId: string) {
-      await call("law.search", { query, jurisdiction, mode: "keyword", limit: 2 });
-      // A real node in the selected jurisdiction proves provenance only. Broad
-      // keyword matches have not been vetted for relevance to this plan, so do
-      // not bind them as supporting law or promote them with get_node.
-      const title = items.find(i => i.id === itemId)!.title;
-      warnings.push(`No relevant provision was verified for “${title}” (${jurisdiction}). Broad keyword matches are withheld; this does not establish that no requirements apply.`);
-    }
+    // No law.search runs at all: its results were always discarded (nothing keyword-matched was ever vetted for relevance),
+    // so each call cost a sequential tool round trip and a "law.search was unavailable" warning for nothing.
     const coverage = input.operatingState && input.operatingCity ? await call("law.list_coverage", {}) : null;
     const local = coverage && input.operatingState ? exactLocalCoverage(coverage, input.operatingState, input.operatingCity) : null;
     item("local", "local", local ? "Local requirements need checking" : "Local coverage needs checking", local
-      ? `Coverage confirms a searchable entry for ${local.name} (${local.code}); it does not establish which rules apply to this activity. No relevant local provision was verified.`
+      ? `Coverage confirms a searchable entry for ${local.name} (${local.code}); it does not establish which rules apply to this activity. No local provision was searched for or verified.`
       : "No exact, unambiguous, searchable coverage entry was confirmed for the operating city. Local requirements have not been determined.");
-    if (local) await search("business license", local.code, "local");
-    else warnings.push("Local coverage gap: no local search was run.");
+    warnings.push(local
+      ? `Local law was not searched for this plan; the coverage entry for ${local.name} (${local.code}) only shows that it is searchable.`
+      : "Local coverage gap: no local search was run.");
 
     const lines = catalog?.split("\n").filter(l => /^(?:PRICE(?: \(live\))?:|FOUNDING DISCOUNT:|EXPEDITE \(|SKIP REVIEW \(|TENNESSEE MEMBERS:|EIN ADD-ON: temporarily unavailable)/.test(l)) ?? [];
     const validPrice = lines.filter(l => /^PRICE \(live\): \$\d+(?:,\d{3})*\.\d{2} all-in — /.test(l)).length === 1 &&
@@ -229,6 +223,11 @@ export async function buildPlan(raw: PlanInput, deps: PlanDeps = {}, parent = ne
       }
     } else warnings.push("Qwen ordering is not configured; deterministic sourced items are shown.");
 
+    /** Put the fixed non-US sources in the ledger and return their ids for an item. */
+    function bindAbroad(ids: string[]): string[] {
+      for (const id of ids) ledger.set(id, { ...ABROAD_SOURCES[id] });
+      return ids;
+    }
     if (abroad) {
       metrics.ownerAbroad = true;
       metrics.ownerAbroadFromQwen = abroadFromQwen;
@@ -238,15 +237,15 @@ export async function buildPlan(raw: PlanInput, deps: PlanDeps = {}, parent = ne
         if (ein) {
           ein.title = ABROAD_EIN_TITLE;
           ein.body = (abroadFromQwen ? ABROAD_FLAG_NOTE : "") + ABROAD_EIN;
-          ein.sourceIds = [];
+          ein.sourceIds = bindAbroad(ABROAD_EIN_SOURCE_IDS);
           // These two sources describe the US-resident case ("generally does not need a separate EIN").
           ledger.delete("guide:ein"); ledger.delete("guide:irs");
         }
-        insertAfter("ein", { id: "form_5472", category: "annual_report", title: FORM_5472_TITLE, body: FORM_5472, sourceIds: [], needsCheck: true });
+        insertAfter("ein", { id: "form_5472", category: "annual_report", title: FORM_5472_TITLE, body: FORM_5472, sourceIds: bindAbroad(FORM_5472_SOURCE_IDS), needsCheck: true });
         if (input.mode !== "formed") {
           const rule = catalog ? officeRuleFromCatalog(catalog) : null;
           if (rule) ledger.set("catalog:office", { id: "catalog:office", kind: "catalog", label: "Corpus formation intake — principal office", url: FORMATION_URL, excerpt: rule });
-          insertAfter("entity", { id: "principal_office", category: "entity", title: PRINCIPAL_OFFICE_TITLE, body: principalOfficeBody(state), sourceIds: rule ? ["catalog:office"] : [], needsCheck: true });
+          insertAfter("entity", { id: "principal_office", category: "entity", title: PRINCIPAL_OFFICE_TITLE, body: principalOfficeBody(state), sourceIds: [...bindAbroad(PRINCIPAL_OFFICE_SOURCE_IDS), ...(rule ? ["catalog:office"] : [])], needsCheck: true });
         }
       }
       const tax = items.find(i => i.id === "state_tax");

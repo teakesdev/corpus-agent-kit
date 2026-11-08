@@ -52,10 +52,12 @@ describe("sourced planning", () => {
     expect(plan.items.find(i => i.id === "state_tax")?.sourceIds).toEqual([]);
     expect(plan.items.find(i => i.id === "local")?.sourceIds).toEqual([]);
     expect(plan.items.find(i => i.id === "local")?.body).toContain("searchable entry for Jackson");
-    // Only the local lookup still searches; the annual-report and state-tax searches (and their warnings) are gone.
-    expect(tool.mock.calls.filter(([name]) => name === "law.search").map(([, args]) => args.query)).toEqual(["business license"]);
-    expect(plan.warnings.filter(w => w.includes("No relevant provision was verified"))).toHaveLength(1);
-    expect(plan.warnings.join(" ")).not.toContain("law.search was unavailable");
+    expect(plan.items.find(i => i.id === "local")?.body).toContain("No local provision was searched for or verified.");
+    // No law.search runs: the annual-report, state-tax and local searches were all discarded, so all three are gone.
+    expect(tool.mock.calls.some(([name]) => name === "law.search")).toBe(false);
+    expect(plan.warnings.filter(w => w.includes("No relevant provision was verified"))).toHaveLength(0);
+    expect(plan.warnings.join(" ")).not.toContain("law.search");
+    expect(plan.warnings).toContain("Local law was not searched for this plan; the coverage entry for Jackson (MS-JXN) only shows that it is searchable.");
     expect(plan.tools).toContain("law.list_coverage");
     expect(tool.mock.calls.some(([name]) => name === "law.get_node")).toBe(false);
     expect(plan.items.every(i => i.needsCheck)).toBe(true);
@@ -113,8 +115,8 @@ describe("sourced planning", () => {
   it("keeps formation and operating jurisdictions separate", async () => {
     const tool = vi.fn(fixture({ "law.search": search("Mississippi") }));
     const p = await buildPlan(input, { tool });
-    // The formation (MS) and operating-state (TX) searches were removed; only the matched city (TX-AUS) is searched.
-    expect(tool.mock.calls.filter(([n]) => n === "law.search").map(([, a]) => a.jurisdiction)).toEqual(["TX-AUS"]);
+    // The formation (MS), operating-state (TX) and matched-city (TX-AUS) searches are all gone.
+    expect(tool.mock.calls.some(([n]) => n === "law.search")).toBe(false);
     expect(p.items.find(i => i.id === "state_tax")?.sourceIds).toEqual([]);
     expect(p.items.find(i => i.id === "state_tax")?.body).toContain("Operating state: TX");
     expect(p.sources.filter(s => s.kind === "law")).toHaveLength(0);
@@ -157,22 +159,19 @@ describe("sourced planning", () => {
     expect(p.pricing).toMatchObject({ available: true, state: "MS", lines: ["PRICE (live): $123.00 all-in — test quote only.", "FOUNDING DISCOUNT: $10 off only while slots remain; a quote does not reserve one."] });
     expect(JSON.stringify(p)).not.toContain("needed for everyone");
   });
-  it("uses a fixed local keyword query without sending the founder activity to law.search", async () => {
+  it("never searches law, and sends the founder activity only to the NAICS lookup", async () => {
     const tool = vi.fn(fixture());
     const plan = await buildPlan(input, { tool });
-    const searches = tool.mock.calls.filter(([name]) => name === "law.search");
-    expect(searches.every(([, args]) => !JSON.stringify(args).includes(input.activity))).toBe(true);
-    expect(searches.find(([, args]) => args.jurisdiction === "TX-AUS")?.[1]).toEqual({
-      query: "business license", jurisdiction: "TX-AUS", mode: "keyword", limit: 2,
-    });
+    expect(tool.mock.calls.some(([name]) => name === "law.search")).toBe(false);
+    expect(tool.mock.calls.filter(([, args]) => JSON.stringify(args).includes(input.activity)).map(([name]) => name)).toEqual(["formation.lookup_naics"]);
     expect(plan.items.find(i => i.id === "local")?.needsCheck).toBe(true);
     expect(plan.items.find(i => i.id === "local")?.body).toContain("does not establish which rules apply");
   });
-  it("uses four bounded tools without promoting a search hit to full provision evidence", async () => {
+  it("uses three bounded tools and never fetches a provision", async () => {
     const tool = vi.fn(fixture());
     await buildPlan(input, { tool });
-    // requirements, NAICS lookup, coverage, and the one local search.
-    expect(tool.mock.calls.map(([name]) => name).sort()).toEqual(["formation.lookup_naics", "formation.requirements", "law.list_coverage", "law.search"]);
+    // requirements, NAICS lookup, coverage.
+    expect(tool.mock.calls.map(([name]) => name).sort()).toEqual(["formation.lookup_naics", "formation.requirements", "law.list_coverage"]);
     expect(tool.mock.calls.some(([name]) => name === "law.get_node")).toBe(false);
   });
   it("cancels a hung tool and degrades deterministically", async () => {
@@ -189,7 +188,7 @@ describe("sourced planning", () => {
     expect(p.items.length).toBeGreaterThanOrEqual(6);
     expect(p.tools).not.toContain("qwen.order_known_items");
   });
-  it("returns curated output inside the deadline for four 4.4-second tools (two run together) and skips ordering", async () => {
+  it("returns curated output inside the deadline for three 4.4-second tools (two run together) and skips ordering", async () => {
     vi.useFakeTimers();
     const started = Date.now();
     const signals: AbortSignal[] = [];
@@ -203,13 +202,13 @@ describe("sourced planning", () => {
       return fixture()(name, args, signal);
     }) as ReturnType<typeof vi.fn<ToolCall>>;
     let completedAt = 0;
-    // 15 s plan budget: requirements and NAICS finish at 4.4 s, coverage at 8.8 s, the local search at 13.2 s, leaving
-    // 1.8 s, under the 2.5 s Qwen ordering needs.
-    const pending = buildPlan(input, { tool, select, timeoutMs: 15000 }).then(plan => { completedAt = Date.now(); return plan; });
-    await vi.advanceTimersByTimeAsync(14500);
+    // 11 s plan budget: requirements and NAICS finish at 4.4 s and coverage at 8.8 s, leaving 2.2 s, under the 2.5 s
+    // Qwen ordering needs.
+    const pending = buildPlan(input, { tool, select, timeoutMs: 11000 }).then(plan => { completedAt = Date.now(); return plan; });
+    await vi.advanceTimersByTimeAsync(10000);
     const plan = await pending;
-    expect(completedAt - started).toBe(13200);
-    expect(tool).toHaveBeenCalledTimes(4);
+    expect(completedAt - started).toBe(8800);
+    expect(tool).toHaveBeenCalledTimes(3);
     expect(signals.every(s => !s.aborted)).toBe(true);
     expect(plan.pricing.available).toBe(true);
     expect(plan.sources.some(s => s.kind === "law")).toBe(false);
@@ -458,33 +457,51 @@ describe("optional ownerAbroad field", () => {
     expect(plan.sources.every(s => ["law", "catalog", "guide"].includes(s.kind))).toBe(true);
   });
   it("only ever emits source URLs the live web client already accepts", async () => {
-    // apps/web autopilot-plan-client.ts safeCorpusUrl: catalog = the formation page; guide = three fixed URLs.
-    const allowedGuide = new Set(["https://corpuslaw.us/checklist", "https://corpuslaw.us/guides/after-forming-an-llc#step-ein", "https://www.irs.gov/businesses/small-businesses-self-employed/single-member-limited-liability-companies"]);
+    // apps/web autopilot-plan-client.ts safeCorpusUrl: catalog = the formation page; guide = seven fixed URLs (the
+    // original three plus the four the non-US items need). The web must deploy with these before this service does.
+    const allowedGuide = new Set([
+      "https://corpuslaw.us/checklist", "https://corpuslaw.us/guides/after-forming-an-llc#step-ein",
+      "https://www.irs.gov/businesses/small-businesses-self-employed/single-member-limited-liability-companies",
+      GUIDE_URL, "https://www.irs.gov/businesses/small-businesses-self-employed/get-an-employer-identification-number",
+      "https://www.irs.gov/instructions/iss4", "https://www.irs.gov/instructions/i5472",
+    ]);
     for (const abroad of [false, true]) {
       const plan = await buildPlan({ ...wyInput, ownerAbroad: abroad }, { tool: wyTool() });
       for (const s of plan.sources) expect(s.kind === "catalog" ? s.url === "https://corpuslaw.us/formation" : allowedGuide.has(s.url)).toBe(true);
       expect(plan.items.every(i => i.sourceIds.every(id => plan.sources.some(s => s.id === id)))).toBe(true);
       expect(new Set(plan.items.map(i => i.id)).size).toBe(plan.items.length);
+      expect(new Set(plan.sources.map(s => s.id)).size).toBe(plan.sources.length);
+      // The non-US URLs appear only on an abroad plan, and only as sources, never as text in an item body.
+      expect(plan.sources.some(s => s.url === GUIDE_URL)).toBe(abroad);
+      expect(plan.items.some(i => /https?:\/\//.test(i.body))).toBe(false);
     }
+  });
+  it("emits each of the four new URLs exactly as a guide source on an abroad plan", async () => {
+    const plan = await buildPlan({ ...wyInput, ownerAbroad: true }, { tool: wyTool() });
+    const urls = plan.sources.filter(s => s.kind === "guide").map(s => s.url);
+    for (const url of [GUIDE_URL, "https://www.irs.gov/businesses/small-businesses-self-employed/get-an-employer-identification-number", "https://www.irs.gov/instructions/iss4", "https://www.irs.gov/instructions/i5472"]) expect(urls).toContain(url);
+    expect(plan.sources.every(s => s.excerpt.trim().length > 0 && s.excerpt.length <= 5000 && s.label.length <= 400)).toBe(true);
   });
 });
 
 describe("founder outside the US (request field)", () => {
   const plan = () => buildPlan({ ...wyInput, ownerAbroad: true }, { tool: wyTool() });
-  it("replaces the EIN item with the SS-4 version, cites the guide and IRS pages, and drops the US-resident sources", async () => {
+  it("replaces the EIN item with the short SS-4 version, sourced to the guide and the IRS pages, and drops the US-resident sources", async () => {
     const p = await plan();
     const ein = p.items.find(i => i.id === "ein")!;
     expect(ein.category).toBe("ein");
-    expect(ein.body).toContain("Form SS-4");
-    expect(ein.body).toContain("online application needs the responsible party's SSN or ITIN");
-    expect(ein.body).toContain("+1 267-941-1099");
-    expect(ein.body).toContain("+1 304-707-9471");
-    expect(ein.body).toContain("IRS EIN International Operation in Cincinnati");
-    expect(ein.body).toContain("EIN add-on uses the online application");
-    for (const url of [GUIDE_URL, "https://www.irs.gov/businesses/small-businesses-self-employed/get-an-employer-identification-number", "https://www.irs.gov/instructions/iss4"]) expect(ein.body).toContain(url);
+    expect(ein.body).toBe("An EIN is the LLC's US tax number. Banks and payment processors ask for it, and it is free from the IRS. The IRS online application needs the responsible party's SSN or ITIN and can't be used when the principal place of business is outside the US, so a founder without an SSN or ITIN requests the EIN with Form SS-4 by phone, fax or mail; the guide lists the IRS numbers. Corpus's EIN add-on uses the online application, so it can't get this EIN for you; apply directly with the IRS after the LLC is formed.");
+    expect(ein.body).not.toMatch(/\+1 \d{3}|https?:|Cincinnati|a\.m\./);
     expect(ein.body).not.toContain("generally does not need a separate EIN");
-    expect(ein.body.startsWith("Your description suggests")).toBe(false);
-    expect(ein.sourceIds).toEqual([]);
+    expect(ein.sourceIds).toEqual(["guide:nonres:ein", "guide:irs-ein", "guide:irs-ss4"]);
+    const byId = (id: string) => p.sources.find(s => s.id === id)!;
+    expect(byId("guide:nonres:ein")).toMatchObject({ kind: "guide", url: GUIDE_URL });
+    // The numbers the body defers to are in the quoted guide text.
+    expect(byId("guide:nonres:ein").excerpt).toContain("+1 267-941-1099");
+    expect(byId("guide:nonres:ein").excerpt).toContain("+1 304-707-9471");
+    expect(byId("guide:nonres:ein").excerpt).toContain("IRS EIN International Operation in Cincinnati");
+    expect(byId("guide:irs-ein")).toMatchObject({ url: "https://www.irs.gov/businesses/small-businesses-self-employed/get-an-employer-identification-number", excerpt: "Official IRS page. No excerpt was retrieved; open the page for the current guidance." });
+    expect(byId("guide:irs-ss4")).toMatchObject({ url: "https://www.irs.gov/instructions/iss4", excerpt: "Official IRS page. No excerpt was retrieved; open the page for the current guidance." });
     expect(p.sources.some(s => s.id === "guide:ein" || s.id === "guide:irs")).toBe(false);
     expect(ein.body.length).toBeLessThanOrEqual(3000);
   });
@@ -496,8 +513,11 @@ describe("founder outside the US (request field)", () => {
     expect(f.body).toContain("pro forma Form 1120 with Form 5472 attached");
     expect(f.body).toContain("$25,000 per year");
     expect(f.body).toContain("26 U.S.C. § 6038A(d)");
-    expect(f.body).toContain(GUIDE_URL);
-    expect(f.body).toContain("https://www.irs.gov/instructions/i5472");
+    expect(f.body).not.toMatch(/https?:/);
+    expect(f.sourceIds).toEqual(["guide:nonres:5472", "guide:irs-5472"]);
+    expect(p.sources.find(s => s.id === "guide:nonres:5472")).toMatchObject({ kind: "guide", url: GUIDE_URL, excerpt: expect.stringContaining("pro forma Form 1120 with Form 5472 attached") });
+    expect(p.sources.find(s => s.id === "guide:nonres:5472")!.excerpt).toContain("$25,000 per year");
+    expect(p.sources.find(s => s.id === "guide:irs-5472")).toMatchObject({ url: "https://www.irs.gov/instructions/i5472" });
   });
   it("adds the principal-office item as an entity item after the entity, as Corpus's intake rule", async () => {
     const p = await plan();
@@ -508,18 +528,19 @@ describe("founder outside the US (request field)", () => {
     expect(o.body).toContain("two-letter country code");
     expect(o.body).toContain("Maryland and New York the address must be in that state");
     expect(o.body).toContain("You selected Wyoming, where the intake accepts an address abroad.");
-    expect(o.body).toContain(GUIDE_URL);
-    // The live catalog's own sentence backs it.
-    expect(o.sourceIds).toEqual(["catalog:office"]);
+    expect(o.body).not.toMatch(/https?:|More:/);
+    // The guide and the live catalog's own sentence back it.
+    expect(o.sourceIds).toEqual(["guide:nonres:office", "catalog:office"]);
+    expect(p.sources.find(s => s.id === "guide:nonres:office")).toMatchObject({ kind: "guide", url: GUIDE_URL, excerpt: expect.stringContaining("Corpus can use an address outside the United States for an LLC formed in Wyoming or Delaware.") });
     expect(p.sources.find(s => s.id === "catalog:office")).toMatchObject({ kind: "catalog", url: "https://corpuslaw.us/formation", excerpt: expect.stringMatching(/^In Wyoming and Delaware only, .* Maryland and New York need an office in that state\.$/) });
     expect(p.sources.find(s => s.id === "catalog:office")!.excerpt).not.toContain("URL hash");
   });
-  it("tailors the office sentence to the chosen state and stays unsourced when the catalog lacks the rule", async () => {
+  it("tailors the office sentence to the chosen state and keeps only the guide source when the catalog lacks the rule", async () => {
     expect(principalOfficeBody("TX")).toContain("You selected Texas, where the intake needs a US street address.");
     expect(principalOfficeBody("NY")).toContain("You selected New York, where the intake needs an office address in New York.");
     expect(principalOfficeBody(null)).not.toContain("You selected");
     const p = await buildPlan({ ...wyInput, ownerAbroad: true }, { tool: wyTool({ "formation.requirements": wyCatalog.replace(/In Wyoming and Delaware only[^\n]*state\./, "") }) });
-    expect(p.items.find(i => i.id === "principal_office")?.sourceIds).toEqual([]);
+    expect(p.items.find(i => i.id === "principal_office")?.sourceIds).toEqual(["guide:nonres:office"]);
     expect(p.sources.some(s => s.id === "catalog:office")).toBe(false);
   });
   it("words the state-tax item without a law claim when no operating state is chosen", async () => {
@@ -549,6 +570,7 @@ describe("founder outside the US (request field)", () => {
     expect(p.items.map(i => i.id)).not.toEqual(expect.arrayContaining(["form_5472"]));
     expect(p.items.some(i => i.id === "principal_office")).toBe(false);
     expect(p.items.find(i => i.id === "ein")?.body).toContain("generally does not need a separate EIN");
+    expect(p.sources.some(s => s.id.startsWith("guide:nonres") || s.id.startsWith("guide:irs-"))).toBe(false);
     expect(p.pricing.lines[0]).toContain("Optional EIN add-on: +$75.00.");
     expect(p.items.find(i => i.id === "state_tax")?.body).toBe("Operating state is not selected. Tax registration applicability has not been determined.");
   });
@@ -557,6 +579,7 @@ describe("founder outside the US (request field)", () => {
     const p = await buildPlan({ ...wyInput, entityType: "nonprofit", ownerAbroad: true }, { tool: wyTool({ "formation.requirements": np }) });
     expect(p.items.some(i => i.id === "form_5472" || i.id === "principal_office")).toBe(false);
     expect(p.items.find(i => i.id === "ein")?.body).toContain("single-member LLC exception");
+    expect(p.sources.some(s => s.id.startsWith("guide:nonres") || s.id.startsWith("guide:irs-"))).toBe(false);
     expect(p.items.find(i => i.id === "state_tax")?.body).toContain("outside the US");
     expect(p.pricing.lines.join("\n")).not.toContain("Optional EIN add-on");
   });
