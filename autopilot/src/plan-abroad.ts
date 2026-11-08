@@ -93,6 +93,7 @@ export function officeRuleFromCatalog(catalog: string): string | null {
 }
 
 export const ABROAD_STATE_TAX = "Operating location: outside the US. Whether the LLC must register for tax in any US state has not been determined.";
+export const ABROAD_LOCAL = "You're operating from outside the US, so no US city's local rules were checked. If you'll have a location in a US city, add it and refresh the plan.";
 export const ABROAD_EIN_PRICING_LINE = "The EIN add-on isn't available without an SSN or ITIN; see the EIN step.";
 
 /**

@@ -125,6 +125,28 @@ describe("the Qwen ownerAbroad flag, through the real ordering call", () => {
     expect(seen).toMatchObject({ qwenCalls: 1, totalTokens: 120, ownerAbroad: true, ownerAbroadFromQwen: true });
   });
 
+  it("sends the lookup's candidates, keeps max_tokens at 256, and renders only the codes Qwen picked from them", async () => {
+    useQwen();
+    const withCandidates: ToolCall = async (name, args, signal) => name === "formation.lookup_naics"
+      ? 'NAICS candidates for "x":\n- 541511 — Custom Computer Programming Services\n- 336612 — Boat Building\n- 513210 — Software Publishers'
+      : tool(name, args, signal);
+    create.mockResolvedValue({ choices: [{ message: { content: '{"order":["entity"],"ownerAbroad":false,"naics":["513210"]}' } }] });
+    const plan = await buildPlan(input, { tool: withCandidates });
+    const [body] = create.mock.calls[0]!;
+    expect(body.max_tokens).toBe(256);
+    expect(body.messages[0].content).toContain('"naics":[codes]');
+    expect(body.messages[0].content).toMatch(/never invent a code/i);
+    expect(JSON.parse(body.messages[1].content).naicsCandidates).toEqual([
+      { code: "541511", title: "Custom Computer Programming Services" }, { code: "336612", title: "Boat Building" }, { code: "513210", title: "Software Publishers" },
+    ]);
+    expect(plan.items.find(i => i.id === "naics")!.body).toContain("- 513210 — Software Publishers");
+    expect(plan.items.find(i => i.id === "naics")!.body).not.toMatch(/Boat Building|541511/);
+    // An invented code is rejected: the first three candidates are shown instead.
+    create.mockResolvedValue({ choices: [{ message: { content: '{"order":["entity"],"ownerAbroad":false,"naics":["999999"]}' } }] });
+    const fallback = await buildPlan(input, { tool: withCandidates });
+    expect(fallback.items.find(i => i.id === "naics")!.body).toContain("- 336612 — Boat Building");
+  });
+
   it("keeps the old behavior when the answer is not the strict object", async () => {
     useQwen();
     for (const content of ['["entity","ein"]', '{"order":["entity"]}', "```json\n{\"order\":[],\"ownerAbroad\":true}\n```", '{"order":["entity"],"ownerAbroad":"yes"}']) {

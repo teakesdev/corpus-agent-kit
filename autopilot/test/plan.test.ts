@@ -822,3 +822,137 @@ describe("live quote by planning mode", () => {
     expect(tool).not.toHaveBeenCalled();
   });
 });
+
+// A lookup reply like the one a Shanghai AI-SaaS description produced: the relevant codes mixed with unrelated ones.
+const naicsSix = `NAICS candidates for "Fictional software business" (confirm with the user before recording one):
+- 455219 — General Merchandise Retailers
+- 541511 — Custom Computer Programming Services
+- 513210 — Software Publishers
+- 336612 — Boat Building
+- 333517 — Machine Tool Manufacturing
+- 336611 — Ship Building and Repairing`;
+const sixTool = wyTool({ "formation.lookup_naics": naicsSix });
+const row = (code: string, title: string) => `- ${code} — ${title}`;
+const naicsBody = (p: { items: { id: string; body: string }[] }) => p.items.find(i => i.id === "naics")?.body.split("\n").slice(1);
+
+describe("Qwen picks the relevant NAICS codes", () => {
+  const answer = (naics?: unknown, extra: object = {}) => ({ order: ["entity", "naics"], ownerAbroad: false, ...(naics === undefined ? {} : { naics }), ...extra });
+  it("gives Qwen the lookup's codes and titles, after the lookup has finished", async () => {
+    let lookupDone = false;
+    const slow: ToolCall = async (name, args, signal) => {
+      if (name === "formation.lookup_naics") { await new Promise(r => setTimeout(r, 30)); lookupDone = true; return naicsSix; }
+      return wyTool()(name, args, signal);
+    };
+    const select = vi.fn(async () => { expect(lookupDone).toBe(true); return answer(["541511"]); });
+    await buildPlan(wyInput, { tool: slow, select });
+    expect(select).toHaveBeenCalledTimes(1);
+    const context = (select.mock.calls[0] as unknown[])[2] as { naicsCandidates: { code: string; title: string }[]; input: PlanInput };
+    expect(context.naicsCandidates).toEqual([
+      { code: "455219", title: "General Merchandise Retailers" }, { code: "541511", title: "Custom Computer Programming Services" },
+      { code: "513210", title: "Software Publishers" }, { code: "336612", title: "Boat Building" },
+      { code: "333517", title: "Machine Tool Manufacturing" }, { code: "336611", title: "Ship Building and Repairing" },
+    ]);
+    expect(context.input.activity).toBe("Fictional software business");
+  });
+  it("shows only the chosen codes, in Qwen's order, in the item and its source", async () => {
+    const p = await buildPlan(wyInput, { tool: sixTool, select: async () => answer(["513210", "541511"]) });
+    const rows = [row("513210", "Software Publishers"), row("541511", "Custom Computer Programming Services")];
+    expect(naicsBody(p)).toEqual(rows);
+    expect(p.items.find(i => i.id === "naics")?.body.split("\n")[0]).toBe("Candidate codes for the business you described. They are matches, not a recommendation: confirm one before it is recorded on the filing.");
+    expect(p.sources.find(s => s.id === "catalog:naics")?.excerpt).toBe(rows.join("\n"));
+    expect(JSON.stringify(p)).not.toMatch(/Boat Building|Ship Building|Machine Tool|General Merchandise/);
+    expect(p.items.find(i => i.id === "naics")).toMatchObject({ category: "entity", sourceIds: ["catalog:naics"] });
+    expect(p.tools).toContain("qwen.order_known_items");
+  });
+  it("accepts up to three codes", async () => {
+    const p = await buildPlan(wyInput, { tool: sixTool, select: async () => answer(["541511", "513210", "455219"]) });
+    expect(naicsBody(p)?.map(l => l.slice(2, 8))).toEqual(["541511", "513210", "455219"]);
+  });
+  it("omits the NAICS item when Qwen picks none", async () => {
+    const p = await buildPlan(wyInput, { tool: sixTool, select: async () => answer([]) });
+    expect(p.items.some(i => i.id === "naics")).toBe(false);
+    expect(p.sources.some(s => s.id === "catalog:naics")).toBe(false);
+    expect(p.items.every(i => i.sourceIds.every(id => p.sources.some(s => s.id === id)))).toBe(true);
+    expect(p.warnings.join(" ")).not.toContain("Qwen ordering was unavailable");
+  });
+  it("shows the lookup's first three when Qwen is not configured", async () => {
+    const p = await buildPlan(wyInput, { tool: sixTool });
+    expect(naicsBody(p)?.map(l => l.slice(2, 8))).toEqual(["455219", "541511", "513210"]);
+    expect(p.sources.find(s => s.id === "catalog:naics")?.excerpt).not.toContain("336612");
+  });
+  it("shows the lookup's first three when Qwen fails or returns nothing usable", async () => {
+    const p = await buildPlan(wyInput, { tool: sixTool, select: async () => { throw new Error("down"); } });
+    expect(naicsBody(p)?.map(l => l.slice(2, 8))).toEqual(["455219", "541511", "513210"]);
+  });
+  it("shows the lookup's first three when a bare ordering array or an answer without naics comes back", async () => {
+    for (const reply of [["entity"], answer()]) {
+      const p = await buildPlan(wyInput, { tool: sixTool, select: async () => reply });
+      expect(naicsBody(p)?.map(l => l.slice(2, 8))).toEqual(["455219", "541511", "513210"]);
+      expect(p.warnings.join(" ")).not.toContain("Qwen ordering was unavailable");
+    }
+  });
+  it.each([
+    ["a code outside the lookup's list", ["999999"]],
+    ["one good and one invented code", ["541511", "541512"]],
+    ["more than three codes", ["541511", "513210", "455219", "336612"]],
+    ["a repeated code", ["541511", "541511"]],
+    ["a number", [541511]],
+    ["a string instead of a list", "541511"],
+    ["a code with extra text", ["541511 — Custom Computer Programming Services"]],
+    ["null", null],
+  ])("rejects the whole answer for %s and falls back to the first three", async (_name, naics) => {
+    const p = await buildPlan(wyInput, { tool: sixTool, select: async () => answer(naics, { ownerAbroad: true }) });
+    expect(naicsBody(p)?.map(l => l.slice(2, 8))).toEqual(["455219", "541511", "513210"]);
+    expect(p.warnings.join(" ")).toContain("Qwen ordering was unavailable");
+    expect(p.tools).not.toContain("qwen.order_known_items");
+    expect(p.items.some(i => i.id === "form_5472")).toBe(false); // the abroad flag in a rejected answer is not believed either
+  });
+  it("accepts the chosen codes together with the abroad flag", async () => {
+    const p = await buildPlan(wyInput, { tool: sixTool, select: async () => answer(["541511"], { ownerAbroad: true }) });
+    expect(naicsBody(p)).toEqual([row("541511", "Custom Computer Programming Services")]);
+    expect(p.items.some(i => i.id === "form_5472")).toBe(true);
+  });
+  it("has nothing to choose from when the lookup failed: an empty list is fine, a code is not", async () => {
+    const failed = wyTool({ "formation.lookup_naics": "No candidates." });
+    const none = await buildPlan(wyInput, { tool: failed, select: async () => answer([]) });
+    expect(none.items.some(i => i.id === "naics")).toBe(false);
+    expect(none.warnings.join(" ")).not.toContain("Qwen ordering was unavailable");
+    const invented = await buildPlan(wyInput, { tool: failed, select: async () => answer(["541511"]) });
+    expect(invented.items.some(i => i.id === "naics")).toBe(false);
+    expect(invented.warnings.join(" ")).toContain("Qwen ordering was unavailable");
+  });
+  it("sends no candidate list when there is no lookup result", async () => {
+    const select = vi.fn(async () => answer([]));
+    await buildPlan({ ...wyInput, activity: "" }, { tool: sixTool, select });
+    expect(((select.mock.calls[0] as unknown[])[2] as object)).not.toHaveProperty("naicsCandidates");
+  });
+});
+
+describe("local item for a founder abroad", () => {
+  const abroadText = "You're operating from outside the US, so no US city's local rules were checked. If you'll have a location in a US city, add it and refresh the plan.";
+  it.each([
+    ["the request field", { ...wyInput, ownerAbroad: true }, undefined],
+    ["the request field with an operating state", { ...wyInput, ownerAbroad: true, operatingState: "TX" as const }, undefined],
+    ["the Qwen flag", wyInput, async () => ({ order: ["entity"], ownerAbroad: true })],
+  ])("explains why no city was checked, with no coverage-gap warning (%s)", async (_name, planInput, select) => {
+    const p = await buildPlan(planInput as PlanInput, { tool: wyTool(), ...(select ? { select } : {}) });
+    const local = p.items.find(i => i.id === "local")!;
+    expect(local).toMatchObject({ category: "local", body: abroadText, sourceIds: [], needsCheck: true });
+    expect(p.warnings.join(" ")).not.toMatch(/Local coverage gap|Local law was not searched/);
+  });
+  it("keeps the normal local wording when the founder gives a city", async () => {
+    const tool = fixture({ "law.list_coverage": "- MS-JXN — Jackson (municipal): 100 provisions, 80 searchable chunks" });
+    const p = await buildPlan({ ...input, operatingState: "MS", operatingCity: "Jackson", ownerAbroad: true }, { tool });
+    expect(p.items.find(i => i.id === "local")?.body).toContain("searchable entry for Jackson");
+    expect(p.warnings.join(" ")).toContain("Local law was not searched for this plan");
+    const unmatched = await buildPlan({ ...input, operatingCity: "Nowhere", ownerAbroad: true }, { tool: fixture() });
+    expect(unmatched.items.find(i => i.id === "local")?.body).toContain("No exact, unambiguous, searchable coverage entry");
+    expect(unmatched.warnings.join(" ")).toContain("Local coverage gap");
+  });
+  it("leaves a founder in the US with no city exactly as before", async () => {
+    const p = await buildPlan(wyInput, { tool: wyTool() });
+    expect(p.items.find(i => i.id === "local")?.body).toBe("No exact, unambiguous, searchable coverage entry was confirmed for the operating city. Local requirements have not been determined.");
+    expect(p.items.find(i => i.id === "local")?.needsCheck).toBe(true);
+    expect(p.warnings).toContain("Local coverage gap: no local search was run.");
+  });
+});
