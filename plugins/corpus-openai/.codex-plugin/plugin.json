@@ -1,6 +1,6 @@
 {
   "name": "corpus",
-  "version": "0.1.2",
+  "version": "0.1.3",
   "description": "Understand LLC and nonprofit formation requirements and research cited US business law.",
   "author": {
     "name": "Corpus",
@@ -97,7 +97,7 @@
         "commerce_description": "This separate OpenAI version provides informational formation checklists, NAICS lookup and US law research. Its server-side allowlist permits five read-only tools. It has no service ordering, transactional links, payment operations, sales prompts, or billing tools."
       },
       "publication": {
-        "release_notes": "Informational-only OpenAI package with separate MCP endpoint and skills. Local validation does not establish backend deployment, client behavior, domain verification, or review approval."
+        "release_notes": "First public release. Get an informational LLC or nonprofit corporation checklist for a US state, find NAICS industry-code candidates, check which US jurisdictions Corpus covers, and search and read cited US business-law provisions with their source and date. Read-only: Corpus does not file, take payment, or collect personal filing details."
       }
     }
   }
