@@ -1,7 +1,7 @@
 {
   "name": "corpus",
   "version": "0.1.4",
-  "description": "Learn what it takes to form an LLC or nonprofit in any US state and research cited US business law.",
+  "description": "Learn what it takes to form an LLC or nonprofit in any US state, start the filing on Corpus, and research cited US business law.",
   "author": {
     "name": "Corpus",
     "url": "https://corpuslaw.us"
@@ -11,6 +11,7 @@
   "license": "Apache-2.0",
   "keywords": [
     "form an llc",
+    "start an llc",
     "llc requirements",
     "nonprofit incorporation",
     "business formation",
@@ -20,14 +21,13 @@
     "zoning",
     "state statutes",
     "city ordinances",
-    "legal research",
-    "compliance"
+    "legal research"
   ],
   "skills": "./skills/",
   "interface": {
     "displayName": "Corpus: Business Formation",
     "shortDescription": "LLC rules & US business law",
-    "longDescription": "Corpus helps you start a business and research US business law in ChatGPT.\n\nStarting an LLC or nonprofit: ask what your state requires to form an LLC or a nonprofit corporation and get the checklist: the information the filing needs, the questions your state asks, and the duties that follow formation, such as annual reports. Find the NAICS industry code that fits your business. For an LLC, Corpus links to its guide for your state, which covers state filing fees, ongoing requirements with official sources, and how Corpus can prepare and file the formation for you on corpuslaw.us.\n\nResearching business law: search official US statutes and city codes about business licenses, permits, zoning, home-based businesses, short-term rentals and more, then read the full text of a provision with its citation, source and date. Corpus covers US federal law, statutes from all 50 states and DC (a few are partial), and codes for more than 180 cities. Check coverage first, and read the full provision before relying on it.\n\nCorpus provides legal information, not legal or tax advice. Inside ChatGPT it does not collect personal filing details, take payment, or submit filings. Forming a company and getting IRS tax-exempt status are separate steps.",
+    "longDescription": "Corpus helps you start a business and research US business law in ChatGPT.\n\nStarting an LLC or nonprofit: ask what your state requires to form an LLC or a nonprofit corporation and get the checklist: the information the filing needs, the questions your state asks, and the duties that follow formation, such as annual reports. Find the NAICS industry code that fits your business. When you are ready, Corpus prepares a link to its formation intake on corpuslaw.us with your business details already filled in (state, business name, industry code and what the business does), so you can add the rest, review the draft and decide whether to file. For an LLC, Corpus also links to its guide for your state, covering state filing fees and ongoing requirements with official sources.\n\nResearching business law: search official US statutes and city codes about business licenses, permits, zoning, home-based businesses, short-term rentals and more, then read the full text of a provision with its citation, source and date. Corpus covers US federal law, statutes from all 50 states and DC (a few are partial), and codes for more than 180 cities. Check coverage first, and read the full provision before relying on it.\n\nCorpus provides legal information, not legal or tax advice. Inside ChatGPT it never asks for addresses, personal names, email addresses or ID numbers, never takes payment, and never submits a filing; those steps happen on corpuslaw.us. Forming a company and getting IRS tax-exempt status are separate steps.",
     "developerName": "Corpus",
     "category": "Productivity",
     "capabilities": [],
@@ -74,10 +74,10 @@
               "expected_behavior": "Check Mississippi coverage, search that jurisdiction, and read a returned provision by its node ID. Cite the returned citation and jurisdiction. Do not fabricate missing law or present individualized legal advice."
             },
             {
-              "description": "P5: Verify jurisdiction coverage before research",
-              "prompt": "Before researching local business permit rules, show which US jurisdictions Corpus can search and explain any coverage gaps.",
-              "tools_triggered": "law.list_coverage",
-              "expected_behavior": "Report actual searchable coverage, placeholder jurisdictions and degraded counts honestly. Coverage does not prove completeness or freshness; do not invent missing jurisdictions."
+              "description": "P5: Hand off a business draft to Corpus's intake",
+              "prompt": "I want to form a Wyoming LLC called Sagebrush Studio LLC. It does graphic design for small businesses and I'll manage it myself. Set it up so I can finish on Corpus.",
+              "tools_triggered": "formation.requirements, formation.lookup_naics, formation.handoff",
+              "expected_behavior": "Explain the Wyoming checklist, offer NAICS candidates and let the user confirm one, then call formation.handoff with business details only (state, entity type, name, NAICS code, activity, member-managed) and share the returned corpuslaw.us intake link. Say the founder adds the people, address and contact email, reviews the draft and decides whether to file on corpuslaw.us. Do not ask for an address, personal names, email or ID numbers, quote a checkout page, or take payment."
             }
           ],
           "negative": [
@@ -99,10 +99,10 @@
           ]
         },
         "commerce": false,
-        "commerce_description": "This OpenAI version provides informational formation checklists, NAICS lookup and US law research through five read-only tools enforced by a server-side allowlist. It has no service ordering, payment operations, checkout links or billing tools, and it collects no personal filing details. For an LLC, formation.requirements returns one informational link to Corpus's public guide for that state on corpuslaw.us (rules, fees, sources, and a description of Corpus's formation service); any purchase happens on corpuslaw.us, outside ChatGPT."
+        "commerce_description": "Nothing is bought or paid inside ChatGPT, and the app has no payment, order or billing tools and no checkout links. Six tools, enforced by a server-side allowlist: five read-only information tools plus formation.handoff, which returns a link to Corpus's formation intake (a questionnaire on corpuslaw.us, not an order or payment page) with business details filled in: state, entity type, business name, NAICS code, business activity and LLC management type. It accepts no addresses, personal names, email addresses or ID numbers; the founder adds those, reviews the draft, signs in and decides whether to buy the formation service on corpuslaw.us. For an LLC, formation.requirements also returns an informational link to Corpus's public guide for that state."
       },
       "publication": {
-        "release_notes": "Formation checklists now include a link to Corpus's guide for forming an LLC in your state, with state fees, ongoing requirements and official sources. Research covers US federal law, statutes from all 50 states and DC (a few are partial), and codes for more than 180 cities. Clearer tool and listing descriptions."
+        "release_notes": "When you're ready to form your LLC or nonprofit, Corpus can now prepare a link to its formation intake with your business details already filled in, so you can finish on corpuslaw.us. LLC checklists also link to Corpus's guide for your state. Research covers US federal law, statutes from all 50 states and DC (a few are partial), and codes for more than 180 cities."
       }
     }
   }
