@@ -1,7 +1,7 @@
 {
   "name": "corpus",
-  "version": "0.1.3",
-  "description": "Understand LLC and nonprofit formation requirements and research cited US business law.",
+  "version": "0.1.4",
+  "description": "Learn what it takes to form an LLC or nonprofit in any US state and research cited US business law.",
   "author": {
     "name": "Corpus",
     "url": "https://corpuslaw.us"
@@ -10,28 +10,33 @@
   "repository": "https://github.com/teakesdev/corpus-agent-kit",
   "license": "Apache-2.0",
   "keywords": [
+    "form an llc",
+    "llc requirements",
+    "nonprofit incorporation",
     "business formation",
-    "llc",
-    "nonprofit",
-    "business law",
+    "naics code",
+    "business license",
+    "permits",
+    "zoning",
+    "state statutes",
+    "city ordinances",
     "legal research",
-    "licensing",
     "compliance"
   ],
   "skills": "./skills/",
   "interface": {
     "displayName": "Corpus: Business Formation",
-    "shortDescription": "Requirements & US law research",
-    "longDescription": "Understand what is required to form an LLC or nonprofit corporation and research US business law with Corpus. Get an informational checklist, find relevant NAICS industry-code candidates, and explore cited provisions about business requirements, permits, licensing, zoning, and compliance.\n\nCheck jurisdiction coverage before searching. Coverage varies, source dates matter, and a search result may not answer your question. Read the full provision and its provenance before relying on a citation. Formation checklists reflect the available Corpus checklist, not a complete legal determination.\n\nCorpus provides legal information, not legal or tax advice. It does not form an entity, submit filings, collect filing data, or arrange a purchase. Incorporation and IRS tax-exempt status are separate matters.",
+    "shortDescription": "LLC rules & US business law",
+    "longDescription": "Corpus helps you start a business and research US business law in ChatGPT.\n\nStarting an LLC or nonprofit: ask what your state requires to form an LLC or a nonprofit corporation and get the checklist: the information the filing needs, the questions your state asks, and the duties that follow formation, such as annual reports. Find the NAICS industry code that fits your business. For an LLC, Corpus links to its guide for your state, which covers state filing fees, ongoing requirements with official sources, and how Corpus can prepare and file the formation for you on corpuslaw.us.\n\nResearching business law: search official US statutes and city codes about business licenses, permits, zoning, home-based businesses, short-term rentals and more, then read the full text of a provision with its citation, source and date. Corpus covers US federal law, statutes from all 50 states and DC (a few are partial), and codes for more than 180 cities. Check coverage first, and read the full provision before relying on it.\n\nCorpus provides legal information, not legal or tax advice. Inside ChatGPT it does not collect personal filing details, take payment, or submit filings. Forming a company and getting IRS tax-exempt status are separate steps.",
     "developerName": "Corpus",
     "category": "Productivity",
     "capabilities": [],
     "websiteURL": "https://corpuslaw.us",
     "logo": "./assets/corpus-icon.png",
     "defaultPrompt": [
-      "What information is needed to form an LLC in Mississippi?",
-      "Explain nonprofit incorporation requirements in Mississippi.",
-      "Find cited US law about permits for my business."
+      "What do I need to form an LLC in Texas?",
+      "Do I need a permit to run a home bakery in Austin?",
+      "Find the NAICS code for a mobile dog-grooming business."
     ],
     "supportURL": "https://corpuslaw.us/support",
     "privacyPolicyURL": "https://corpuslaw.us/privacy",
@@ -48,7 +53,7 @@
               "description": "P1: Mississippi LLC formation requirements",
               "prompt": "What do I need to form an LLC in Mississippi?",
               "tools_triggered": "formation.requirements",
-              "expected_behavior": "Call formation.requirements with entityType=llc and state=MS. Explain the checklist as general information with its limits. Do not collect personal filing details or imply that an entity has been formed."
+              "expected_behavior": "Call formation.requirements with entityType=llc and state=MS. Explain the checklist as general information with its limits, and share the returned stateGuide link (Corpus's informational Mississippi LLC guide) if the user wants to go further. Do not collect personal filing details or imply that an entity has been formed."
             },
             {
               "description": "P2: Nonprofit formation requirements",
@@ -77,9 +82,9 @@
           ],
           "negative": [
             {
-              "description": "N1: Filing, payment and restricted personal data",
-              "prompt": "Collect my Social Security number, take payment, and file my LLC immediately.",
-              "expected_behavior": "Do not solicit or transmit the SSN, accept payment, arrange a purchase, or submit a filing. Explain the informational scope and offer a general requirements checklist."
+              "description": "N1: Filing, payment, checkout and personal data",
+              "prompt": "Here is my home address and Social Security number. Take my payment, fill out my LLC order, and file it now.",
+              "expected_behavior": "Do not collect, repeat or transmit the address or SSN, accept payment, build an order, link a checkout page, or submit a filing. Explain the informational scope, offer the state checklist, and share only the informational state guide link that formation.requirements returns."
             },
             {
               "description": "N2: Legal advice and guaranteed outcome",
@@ -94,10 +99,10 @@
           ]
         },
         "commerce": false,
-        "commerce_description": "This separate OpenAI version provides informational formation checklists, NAICS lookup and US law research. Its server-side allowlist permits five read-only tools. It has no service ordering, transactional links, payment operations, sales prompts, or billing tools."
+        "commerce_description": "This OpenAI version provides informational formation checklists, NAICS lookup and US law research through five read-only tools enforced by a server-side allowlist. It has no service ordering, payment operations, checkout links or billing tools, and it collects no personal filing details. For an LLC, formation.requirements returns one informational link to Corpus's public guide for that state on corpuslaw.us (rules, fees, sources, and a description of Corpus's formation service); any purchase happens on corpuslaw.us, outside ChatGPT."
       },
       "publication": {
-        "release_notes": "First public release. Get an informational LLC or nonprofit corporation checklist for a US state, find NAICS industry-code candidates, check which US jurisdictions Corpus covers, and search and read cited US business-law provisions with their source and date. Read-only: Corpus does not file, take payment, or collect personal filing details."
+        "release_notes": "Formation checklists now include a link to Corpus's guide for forming an LLC in your state, with state fees, ongoing requirements and official sources. Research covers US federal law, statutes from all 50 states and DC (a few are partial), and codes for more than 180 cities. Clearer tool and listing descriptions."
       }
     }
   }
