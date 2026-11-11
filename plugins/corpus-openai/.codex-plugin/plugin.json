@@ -35,9 +35,10 @@
     "logo": "./assets/corpus-icon.png",
     "defaultPrompt": [
       "What do I need to form an LLC in Texas?",
-      "Do I need a permit to run a home bakery in Austin?",
-      "Find the NAICS code for a mobile dog-grooming business."
+      "What does it take to start a nonprofit in California?",
+      "Can my Florida city stop me from running a business from home?"
     ],
+    "brandColor": "#D4A017",
     "supportURL": "https://corpuslaw.us/support",
     "privacyPolicyURL": "https://corpuslaw.us/privacy",
     "termsOfServiceURL": "https://corpuslaw.us/terms",
