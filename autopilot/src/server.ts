@@ -5,7 +5,7 @@ import { dirname, join } from "node:path";
 import { runAutopilot } from "./agent.js";
 import { buildPlan, handoffPlan } from "./plan.js";
 import { PlanError, validatePlanInput } from "./plan-validation.js";
-import { bounded } from "./plan-tools.js";
+import { bounded, hostedEinNoSsnOffer } from "./plan-tools.js";
 import { requestLogLine, type PlanMetrics } from "./request-log.js";
 import type { PlanInput } from "./plan-contract.js";
 
@@ -191,7 +191,7 @@ export function createServer(deps: Deps = {}): http.Server {
         const input = validatePlanInput(body);
         logInput = input;
         const execute = req.url === "/api/plan/handoff" ? deps.handoff ?? handoffPlan : deps.plan ?? buildPlan;
-        const result = await bounded<unknown>(s => execute(input, { onMetrics: m => { metrics = m; } }, s), controller.signal, Math.min(deps.requestTimeoutMs ?? 25000, 25000));
+        const result = await bounded<unknown>(s => execute(input, { onMetrics: m => { metrics = m; }, einNoSsnOffer: hostedEinNoSsnOffer }, s), controller.signal, Math.min(deps.requestTimeoutMs ?? 25000, 25000));
         const json = JSON.stringify(result);
         if (Buffer.byteLength(json) > MAX_PLAN_RESPONSE_BYTES) throw new PlanError(502, "Planning response is unavailable.");
         if (!res.destroyed) { logStatus = 200; res.writeHead(200, { "Content-Type": "application/json", "Cache-Control": "no-store" }).end(json); }

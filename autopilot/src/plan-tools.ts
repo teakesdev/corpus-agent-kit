@@ -61,6 +61,29 @@ export async function readBoundedResponse(response: Response, signal: AbortSigna
   }
 }
 
+/** Reads whether the EIN without an SSN or ITIN is on sale: its price in cents, or null when it is not (or unreadable). */
+export type EinNoSsnOffer = (signal: AbortSignal) => Promise<number | null>;
+export const EIN_OFFER_TIMEOUT_MS = 2000;
+
+/**
+ * The web's public price list (`GET /api/v1/formation/prices`, CDN-cached, no key) says whether the EIN for a responsible
+ * party with no SSN or ITIN is on sale (`einAddon.noSsnAvailable`, true only while EIN_NO_SSN_ENABLED=on) and its price
+ * (`einAddon.noSsnCents`). It is the same signal the /autopilot answer card reads, so the plan's EIN step and the card
+ * flip together. Anything but an explicit `true` with a sane whole-cent amount is null, and null keeps the old wording.
+ */
+export const hostedEinNoSsnOffer: EinNoSsnOffer = async (signal) => {
+  const response = await fetch(`${corpusBase()}/api/v1/formation/prices`, { signal, headers: { Accept: "application/json" } });
+  const json: unknown = JSON.parse(await readBoundedResponse(response, signal));
+  return einNoSsnCentsFrom(json);
+};
+
+export function einNoSsnCentsFrom(json: unknown): number | null {
+  if (!record(json) || json.ok !== true || !record(json.einAddon)) return null;
+  const { noSsnAvailable, noSsnCents } = json.einAddon;
+  return noSsnAvailable === true && typeof noSsnCents === "number" && Number.isSafeInteger(noSsnCents) && noSsnCents > 0 && noSsnCents < 100_000
+    ? noSsnCents : null;
+}
+
 /** MCP tools return prose in structuredContent.text / content[].text, not result objects. */
 export const hostedTool: ToolCall = async (name, args, signal) => {
   const response = await fetch(`${corpusBase()}/api/mcp`, {

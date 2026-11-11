@@ -1,10 +1,13 @@
 import type { PlanInput, PlanResponse, PlanHandoff, PlanItem, PlanSource } from "./plan-contract.js";
 import {
-  ABROAD_EIN, ABROAD_EIN_PRICING_LINE, ABROAD_EIN_SOURCE_IDS, ABROAD_EIN_TITLE, ABROAD_FLAG_NOTE, ABROAD_SOURCES, ABROAD_STATE_TAX,
+  abroadEinBody, abroadEinGuideExcerpt, abroadEinPricingLine, ABROAD_EIN_SOURCE_IDS, ABROAD_EIN_TITLE, ABROAD_FLAG_NOTE, ABROAD_SOURCES, ABROAD_STATE_TAX,
   ABROAD_LOCAL, FORM_5472, FORM_5472_SOURCE_IDS, FORM_5472_TITLE, officeRuleFromCatalog, parseNaicsCandidates, pricingLineForDisplay,
   principalOfficeBody, PRINCIPAL_OFFICE_SOURCE_IDS, PRINCIPAL_OFFICE_TITLE,
 } from "./plan-abroad.js";
-import { bounded, hostedTool, MAX_TOOL_BYTES, PLAN_TIMEOUT_MS, TOOL_TIMEOUT_MS, UnsupportedFormationError, type ToolCall, type ToolName } from "./plan-tools.js";
+import {
+  bounded, EIN_OFFER_TIMEOUT_MS, hostedTool, MAX_TOOL_BYTES, PLAN_TIMEOUT_MS, TOOL_TIMEOUT_MS, UnsupportedFormationError,
+  type EinNoSsnOffer, type ToolCall, type ToolName,
+} from "./plan-tools.js";
 import { CAMPAIGN_KEYS, PlanError, record, STATES, validatePlanInput, type ValidPlanInput } from "./plan-validation.js";
 import { exactLocalCoverage } from "./plan-evidence.js";
 import { getQwen } from "./qwen.js";
@@ -24,6 +27,12 @@ export interface PlanDeps {
   timeoutMs?: number;
   /** Called once, first, with the request's live counters, so the server can log them even if the request times out. */
   onMetrics?: (metrics: PlanMetrics) => void;
+  /**
+   * Reads whether the EIN without an SSN or ITIN is on sale (the server passes `hostedEinNoSsnOffer`). Asked only for an
+   * LLC founder abroad. Absent, failed or slow means "not on sale", so the EIN step keeps the wording that is true while
+   * EIN_NO_SSN_ENABLED is off.
+   */
+  einNoSsnOffer?: EinNoSsnOffer;
 }
 const GUIDE = "https://corpuslaw.us/guides/after-forming-an-llc";
 const CHECKLIST = "https://corpuslaw.us/checklist";
@@ -265,6 +274,21 @@ export async function buildPlan(raw: PlanInput, deps: PlanDeps = {}, parent = ne
       }
       return ids;
     }
+    // The EIN without an SSN or ITIN: asked only when the abroad EIN step will be shown, and never allowed to cost the
+    // plan its deadline. Any failure reads as "not on sale".
+    let einNoSsnCents: number | null = null;
+    if (abroad && input.entityType !== "nonprofit" && deps.einNoSsnOffer) {
+      const read = deps.einNoSsnOffer;
+      const budget = Math.min(EIN_OFFER_TIMEOUT_MS, deadline - Date.now() - FINISH_RESERVE_MS);
+      if (budget >= MIN_TOOL_BUDGET_MS) {
+        try {
+          einNoSsnCents = await bounded(s => read(s), signal, budget);
+        } catch {
+          signal.throwIfAborted();
+          einNoSsnCents = null;
+        }
+      }
+    }
     if (abroad) {
       metrics.ownerAbroad = true;
       metrics.ownerAbroadFromQwen = abroadFromQwen;
@@ -273,8 +297,10 @@ export async function buildPlan(raw: PlanInput, deps: PlanDeps = {}, parent = ne
         const ein = items.find(i => i.id === "ein");
         if (ein) {
           ein.title = ABROAD_EIN_TITLE;
-          ein.body = (abroadFromQwen ? ABROAD_FLAG_NOTE : "") + ABROAD_EIN;
+          ein.body = (abroadFromQwen ? ABROAD_FLAG_NOTE : "") + abroadEinBody(einNoSsnCents);
           ein.sourceIds = bindAbroad(ABROAD_EIN_SOURCE_IDS);
+          // The guide's closing EIN paragraph changes with the same switch; quote it as the guide now reads.
+          ledger.set("guide:nonres:ein", { ...ABROAD_SOURCES["guide:nonres:ein"]!, excerpt: abroadEinGuideExcerpt(einNoSsnCents) });
           // These two sources describe the US-resident case ("generally does not need a separate EIN").
           ledger.delete("guide:ein"); ledger.delete("guide:irs");
         }
@@ -294,7 +320,7 @@ export async function buildPlan(raw: PlanInput, deps: PlanDeps = {}, parent = ne
 
     const shownLines = priceAvailable ? lines.map(l => pricingLineForDisplay(l, abroad)) : [];
     // The line points at the non-US EIN step, which only an LLC gets.
-    if (priceAvailable && abroad && input.entityType === "llc") shownLines.push(ABROAD_EIN_PRICING_LINE);
+    if (priceAvailable && abroad && input.entityType === "llc") shownLines.push(abroadEinPricingLine(einNoSsnCents));
     const pricing = { available: priceAvailable, state, lines: shownLines, checkedAt: new Date().toISOString() };
     const clamped = clampPlan(items, [...ledger.values()], warnings);
     metrics.itemCount = clamped.items.length;

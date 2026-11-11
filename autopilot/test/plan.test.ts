@@ -6,7 +6,7 @@ import { exactLocalCoverage, parseNode, parseSearch } from "../src/plan-evidence
 import { ABROAD_SOURCES, pricingLineForDisplay, parseNaicsCandidates, officeRuleFromCatalog, principalOfficeBody } from "../src/plan-abroad.js";
 import { clampPlan, MAX_ITEMS, MAX_SOURCES, MAX_WARNINGS, MAX_WARNING_CHARS } from "../src/plan-limits.js";
 import type { PlanItem, PlanSource } from "../src/plan-contract.js";
-import { hostedTool, bounded, MAX_TOOL_BYTES, UnsupportedFormationError } from "../src/plan-tools.js";
+import { hostedTool, bounded, einNoSsnCentsFrom, MAX_TOOL_BYTES, UnsupportedFormationError } from "../src/plan-tools.js";
 import type { ToolCall } from "../src/plan-tools.js";
 import type { PlanMetrics } from "../src/request-log.js";
 import hostedTranscripts from "./fixtures/autopilot-hosted-transcripts.json";
@@ -939,6 +939,70 @@ describe("Qwen picks the relevant NAICS codes", () => {
     const select = vi.fn(async () => answer([]));
     await buildPlan({ ...wyInput, activity: "" }, { tool: sixTool, select });
     expect(((select.mock.calls[0] as unknown[])[2] as object)).not.toHaveProperty("naicsCandidates");
+  });
+});
+
+describe("EIN without an SSN or ITIN (founder abroad), gated on the web's einAddon.noSsnAvailable", () => {
+  const OLD_TAIL = "Corpus's EIN add-on uses the online application, so it can't get this EIN for you; apply directly with the IRS after the LLC is formed.";
+  const on = (cents = 15000) => async () => cents;
+  const abroad = (deps: Parameters<typeof buildPlan>[1] = {}) => buildPlan({ ...wyInput, ownerAbroad: true }, { tool: wyTool(), ...deps });
+
+  it("keeps today's wording, byte for byte, when no offer is read (the flag off, or no reader)", async () => {
+    for (const deps of [{}, { einNoSsnOffer: async () => null }]) {
+      const p = await abroad(deps);
+      expect(p.items.find(i => i.id === "ein")!.body.endsWith(OLD_TAIL)).toBe(true);
+      expect(p.pricing.lines.at(-1)).toBe("The EIN add-on isn't available without an SSN or ITIN; see the EIN step.");
+      expect(p.sources.find(s => s.id === "guide:nonres:ein")!.excerpt).toBe(ABROAD_SOURCES["guide:nonres:ein"]!.excerpt);
+    }
+  });
+
+  it("says Corpus can get the EIN, at the price the web reported, once it is on sale", async () => {
+    const p = await abroad({ einNoSsnOffer: on() });
+    const ein = p.items.find(i => i.id === "ein")!;
+    expect(ein.body).not.toContain("can't get this EIN for you");
+    expect(ein.body).toContain("Corpus can also get this EIN for you for $150: a person at Corpus files Form SS-4 with the IRS by fax");
+    expect(ein.body).toMatch(/4–6 weeks, and no SSN or ITIN is collected\. Tick "The responsible party has no SSN or ITIN"/);
+    expect(ein.body).toContain("You can still apply directly with the IRS for free.");
+    expect(p.pricing.lines.at(-1)).toBe("Optional EIN without an SSN or ITIN: +$150.00, filed by fax, not included above; see the EIN step.");
+    expect(p.pricing.lines.join("\n")).not.toContain("$75");
+    const excerpt = p.sources.find(s => s.id === "guide:nonres:ein")!.excerpt;
+    expect(excerpt).toContain("Corpus can file this for you. The EIN for a founder with no SSN or ITIN costs $150:");
+    expect(excerpt).not.toContain("can't do this for you today");
+    // The shared source map is not mutated: the next plan starts from the old excerpt again.
+    expect(ABROAD_SOURCES["guide:nonres:ein"]!.excerpt).toContain("can't do this for you today");
+  });
+
+  it("never types the price in: a different figure from the web moves every line with it", async () => {
+    const p = await abroad({ einNoSsnOffer: on(17550) });
+    expect(p.items.find(i => i.id === "ein")!.body).toContain("for $175.50:");
+    expect(p.pricing.lines.at(-1)).toContain("+$175.50");
+  });
+
+  it("falls back to today's wording when the read fails or hangs, and the plan still arrives", async () => {
+    for (const read of [async () => { throw new Error("down"); }, () => new Promise<number | null>(() => {})]) {
+      const p = await abroad({ einNoSsnOffer: read, timeoutMs: 8000 });
+      expect(p.items.find(i => i.id === "ein")!.body.endsWith(OLD_TAIL)).toBe(true);
+    }
+  });
+
+  it("is not asked for a US founder or a nonprofit", async () => {
+    const read = vi.fn(on());
+    await buildPlan(wyInput, { tool: wyTool(), einNoSsnOffer: read });
+    const np = wyCatalog.replace("LLC in WY", "nonprofit corporation in WY");
+    await buildPlan({ ...wyInput, entityType: "nonprofit", ownerAbroad: true }, { tool: wyTool({ "formation.requirements": np }), einNoSsnOffer: read });
+    expect(read).not.toHaveBeenCalled();
+  });
+
+  it("reads the web price list strictly: only an explicit true with a whole-cent amount counts", () => {
+    const body = (einAddon: unknown) => ({ ok: true, einAddon });
+    expect(einNoSsnCentsFrom(body({ cents: 7500, available: true, noSsnCents: 15000, noSsnAvailable: true }))).toBe(15000);
+    expect(einNoSsnCentsFrom(body({ noSsnCents: 15000, noSsnAvailable: false }))).toBeNull();
+    expect(einNoSsnCentsFrom(body({ noSsnCents: 15000, noSsnAvailable: "true" }))).toBeNull();
+    expect(einNoSsnCentsFrom(body({ noSsnCents: "15000", noSsnAvailable: true }))).toBeNull();
+    expect(einNoSsnCentsFrom(body({ noSsnCents: 150.5, noSsnAvailable: true }))).toBeNull();
+    expect(einNoSsnCentsFrom(body({ noSsnCents: 0, noSsnAvailable: true }))).toBeNull();
+    expect(einNoSsnCentsFrom({ ok: false, einAddon: { noSsnCents: 15000, noSsnAvailable: true } })).toBeNull();
+    expect(einNoSsnCentsFrom(null)).toBeNull();
   });
 });
 
