@@ -93,9 +93,7 @@ def build(ref, output_dir, layout="marketplace"):
                 and (path.name == "SKILL.md" or "references" in path.parts)
                 and path.name != ".DS_Store"
             ) and member.name not in (
-                "plugins/corpus-openai/assets/logo.png", "plugins/corpus-openai/assets/corpus-icon.png",
-                "plugins/corpus-openai/assets/screenshot-1.png", "plugins/corpus-openai/assets/screenshot-2.png",
-                "plugins/corpus-openai/assets/screenshot-3.png",
+                "plugins/corpus-openai/assets/logo.png", "plugins/corpus-openai/assets/corpus-icon.png"
             ):
                 raise ValueError(f"Unexpected package file: {member.name}")
             files[member.name] = archive.extractfile(member).read()
