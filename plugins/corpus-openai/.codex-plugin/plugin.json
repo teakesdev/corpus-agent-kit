@@ -42,7 +42,12 @@
     "supportURL": "https://corpuslaw.us/support",
     "privacyPolicyURL": "https://corpuslaw.us/privacy",
     "termsOfServiceURL": "https://corpuslaw.us/terms",
-    "composerIcon": "./assets/corpus-icon.png"
+    "composerIcon": "./assets/corpus-icon.png",
+    "screenshots": [
+      "./assets/screenshot-1.png",
+      "./assets/screenshot-2.png",
+      "./assets/screenshot-3.png"
+    ]
   },
   "mcpServers": "./.mcp.json",
   "extensions": {
