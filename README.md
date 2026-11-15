@@ -2,12 +2,15 @@
 
 # corpus-agent-kit
 
-**Give your AI agent real US law — and let it form a company.**
+**Agentic business formation: your AI agent forms the company, a person approves it.**
 
-Open-source connectors for the [Corpus legal platform](https://corpuslaw.us):
-search 700,000+ provisions of federal, state, and municipal law with verbatim
-citations, and run a complete LLC or nonprofit formation intake end to end.
-Every filing still stops at a human approval gate.
+Open-source connectors for [Corpus Law](https://corpuslaw.us). Your agent runs
+the whole US LLC or nonprofit formation intake: it checks what the state
+requires, finds the NAICS code, compares filing options and prepares the
+filing. Every filing stops at a human approval gate, where a person reviews it
+and pays. The same tools give the agent cited search over 2.1M+ provisions of
+US federal, state and municipal law, so it can answer what rules apply to the
+business with verbatim citations.
 
 [![Winner — Qwen Cloud Hackathon, Track 4](https://img.shields.io/badge/Winner-Qwen%20Cloud%20Hackathon%20·%20Track%204-6f42c1)](https://devpost.com/software/corpus-mcp)
 [![License](https://img.shields.io/badge/license-Apache--2.0-blue)](LICENSE)
@@ -145,7 +148,7 @@ Clone and build — see [Quickstart](#quickstart) below.
 
 | Tool | What it does |
 |---|---|
-| `law.search` | Hybrid semantic + keyword search over 700,000+ provisions |
+| `law.search` | Hybrid semantic + keyword search over 2.1M+ provisions |
 | `law.get_node` | Full official text of one provision |
 | `law.list_coverage` | Which jurisdictions are indexed, and how deeply |
 | `formation.requirements` | A state's exact field checklist, quirks, live pricing |
@@ -160,7 +163,7 @@ Formation tools are **never metered** — they stay free with or without a key.
 
 ## Coverage
 
-700,000+ provisions across 20 jurisdictions (18 fully searchable) — federal,
+2.1M+ provisions across 68 jurisdictions — federal,
 state and municipal law, ingested from official sources. Coverage grows, so
 this README does not pin per-jurisdiction counts: call `law.list_coverage` for
 the live list with provision counts and GIS status. It reports honestly when a
@@ -201,7 +204,7 @@ See [docs/architecture.md](docs/architecture.md) for the Mermaid source.
 | Two-lane Qwen routing | ✅ `autopilot/src/` | — |
 | MCP stdio bridge (`corpus-mcp`) | ✅ `mcp-server/` | — |
 | Embeddable widget | ✅ `widget/` | — |
-| Law database (700,000+ provisions, Aurora) | — | ✅ |
+| Law database (2.1M+ provisions, Aurora) | — | ✅ |
 | Hybrid search engine + `/api/mcp` | — | ✅ |
 | `/formation` checkout + GATE 2 | — | ✅ |
 | Stripe payment + state filing execution | — | ✅ |
