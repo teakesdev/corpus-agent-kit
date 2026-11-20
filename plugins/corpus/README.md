@@ -1,19 +1,26 @@
-# Corpus
+# Corpus: Business Formation (LLCs and nonprofits, plus US law search)
 
-Search current US federal, state and municipal law from official sources, with a verbatim
-citation on every result, and prepare an LLC or nonprofit filing for a founder to review and
-pay for.
+Form a US LLC or nonprofit corporation from a conversation. Claude runs the intake, checks the
+state's requirements and live price, and gives the founder one prefilled link on corpuslaw.us to
+review and pay. Claude can also search current US federal, state and municipal law from official
+sources, with a verbatim citation on every result.
 
 ## What it adds
 
-- **Law research.** The `corpus-legal-research` skill has the assistant search Corpus before
-  answering a question about what US law says (permits, zoning, licensing, compliance, filing
-  requirements) and quote the returned citation. Corpus holds more than a million provisions;
-  `law.list_coverage` reports which jurisdictions are searchable, and the assistant says so when
-  one is not covered.
 - **Company formation.** The `corpus-business-formation` skill runs an intake for an LLC (all 50
   states and DC) or a nonprofit corporation (48 states and DC; not New Hampshire or New York),
   checks the state's requirements and live price, and returns one prefilled link on corpuslaw.us.
+  Claude never files or pays: the founder reviews the filing and pays on corpuslaw.us.
+- **Free law scan.** Tell Claude what the business does and where, and the formation skill runs
+  Corpus's free law scan of that state's law and federal law, plus the city's own code when Corpus
+  holds it (or links the founder to it at corpuslaw.us/scan when Claude can't call it). It lists
+  sections that may apply, each with a citation and the reason it was picked. It is a search, not a
+  legal opinion, and it never searches cities other than the one named.
+- **Law research.** The `corpus-legal-research` skill has the assistant search Corpus before
+  answering a question about what US law says (permits, zoning, licensing, compliance, filing
+  requirements) and quote the returned citation. Corpus holds more than two million provisions;
+  `law.list_coverage` reports which jurisdictions are searchable, and the assistant says so when
+  one is not covered.
 
 ## Install
 
@@ -21,7 +28,7 @@ Claude Code:
 
 ```
 /plugin marketplace add teakesdev/corpus-agent-kit
-/plugin install corpus@corpus-agent-kit
+/plugin install corpuslaw-formation@corpus-agent-kit
 ```
 
 No account or API key is needed to start. Other harnesses (Hermes, Cursor, OpenAI Codex, Gemini

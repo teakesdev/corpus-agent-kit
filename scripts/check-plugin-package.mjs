@@ -8,16 +8,18 @@ const mcp = read(root + 'mcp.json');
 const url = 'https://corpuslaw.us/api/mcp';
 assert.equal(mcp.mcpServers.corpus.url, url);
 assert.equal(mcp.mcpServers.corpus.type, 'streamable-http');
-for (const [folder, transport] of [['.claude-plugin', 'http'], ['.cursor-plugin', undefined]]) {
+// Claude's directory listing carries its own name so formation leads; every other package stays 'corpus'.
+const CLAUDE_NAME = 'corpuslaw-formation';
+for (const [folder, transport, name] of [['.claude-plugin', 'http', CLAUDE_NAME], ['.cursor-plugin', undefined, portable.name]]) {
   const manifest = read(root + folder + '/plugin.json');
-  assert.equal(manifest.name, portable.name);
+  assert.equal(manifest.name, name);
   assert.equal(manifest.version, portable.version);
   assert.equal(manifest.mcpServers.corpus.url, url);
   assert.equal(manifest.mcpServers.corpus.type, transport);
   assert.equal(manifest.mcpServers.corpus.headers, undefined, 'anonymous install must be headerless');
   if (manifest.logo) assert.ok(existsSync(root + manifest.logo));
   const market = read(folder + '/marketplace.json');
-  assert.ok(market.plugins.some(p => p.name === 'corpus'), 'marketplace must expose Corpus');
+  assert.ok(market.plugins.some(p => p.name === name), 'marketplace must expose Corpus');
 }
 for (const name of ['corpus-business-formation', 'corpus-legal-research']) {
   assert.ok(existsSync(root + 'skills/' + name + '/SKILL.md'));

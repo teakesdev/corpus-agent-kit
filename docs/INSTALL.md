@@ -61,7 +61,7 @@ The repo root is a plugin marketplace:
 
 ```
 /plugin marketplace add teakesdev/corpus-agent-kit
-/plugin install corpus@corpus-agent-kit
+/plugin install corpuslaw-formation@corpus-agent-kit
 ```
 
 Both skills are auto-discovered from `skills/`, and the `corpus` MCP server is
