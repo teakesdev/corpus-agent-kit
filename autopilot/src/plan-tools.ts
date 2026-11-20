@@ -1,7 +1,7 @@
 import { corpusBase } from "./tools/law-search.js";
 import { PlanError, record } from "./plan-validation.js";
 
-export type ToolName = "formation.requirements" | "law.search" | "law.get_node" | "law.list_coverage" | "formation.handoff";
+export type ToolName = "formation.requirements" | "law.search" | "law.get_node" | "law.list_coverage" | "formation.handoff" | "formation.lookup_naics";
 export type ToolCall = (name: ToolName, args: Record<string, unknown>, signal: AbortSignal) => Promise<string>;
 export const TOOL_TIMEOUT_MS = 4500;
 export const PLAN_TIMEOUT_MS = 24000;

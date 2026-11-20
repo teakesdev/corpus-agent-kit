@@ -1,5 +1,10 @@
 # Phase 1 sourced planning backend
 
+> **This file is the Phase 1 record**, deployed at source commit `cb3999ba87ebf914e01407902aaea1716be946f0`
+> (sections dated 2026-10-25 and 2026-10-26). It is history and is not rewritten. Changes since then are in
+> [2026-11-07 release](#2026-11-07-release) at the end; where the two disagree (hourly cap, `law.search`, response
+> contents), the later section is current.
+
 ## Deployment state — 2026-10-26
 
 The approved Function Compute code-only deployment is complete at source commit
@@ -143,3 +148,42 @@ is deferred. The 20-plan qualitative review remains open. Corpus Phase 2 resume/
 endpoints are deployed and passed the public 404/200 fake-token smoke checks;
 the email-status endpoint reports disabled. The cleanup cron is registered, with
 scheduled-run success still pending. New email sending remains disabled pending checks.
+
+## 2026-11-07 release
+
+Branch `session/autopilot-article-fixes`, PR [#13](https://github.com/teakesdev/corpus-agent-kit/pull/13), first deployed
+at `158328c`; the SWE-2 review fixes (`42eba78`, `1c32250`) are live since 2026-11-07 ~23:08 CST from `13ab1f6`
+(SWE-2 review: APPROVE WITH CHANGES, all findings fixed; the fix round was not re-reviewed). Written for the Qwen
+article, whose readers are mostly outside the US. Still open: the SLS logstore `default-logs` has no index and no
+30-day retention set, and the hosted MCP server is not warmed before the article (deliberately deferred).
+
+**What changed.** `POST /api/plan` takes an optional `ownerAbroad` boolean (absent means false). For a founder abroad,
+from that field or from the ordering call's reading of the activity, the plan swaps in a Form SS-4 EIN item, a Form 5472
+item and a principal-office item, drops the $75 EIN add-on from the displayed price, and says no US city's local rules
+were checked. The existing Qwen call also picks up to three NAICS codes from `formation.lookup_naics`. `law.search` is
+no longer called. Exploring plans with a state and entity get the live quote. The response shape and item categories
+are unchanged. The request log gains `owner_abroad` and `owner_abroad_from_qwen`.
+
+**Deploy order: web first.** The new items cite four guide sources: the Corpus non-resident guide and the IRS
+get-an-EIN, Form SS-4 and Form 5472 pages. The web client rejects the whole plan if a guide source URL is not on its
+allowlist, so the web change that allows those four URLs must be live before this service is. The request field is
+optional and the response shape is unchanged, so every other order of the two deploys is safe.
+
+**Limits (per process; FC may run several instances).** 600 requests an hour in total (`SPEND_CAP_TURNS_PER_HOUR`, set
+to 600 in `s.yaml`; Phase 1 had 120). Per client IP: 60 an hour for `/api/plan`, 120 for `/api/plan/handoff`, 20 for
+`/api/chat` (`PLAN_PER_IP_PER_HOUR`, `HANDOFF_PER_IP_PER_HOUR`, `CHAT_PER_IP_PER_HOUR`), checked before the process
+total, in memory, at most 10,000 clients tracked. The 429 body is unchanged. A plan is also clamped below the web's own
+ceilings: 30 items, 45 sources, 20 warnings of at most 480 characters.
+
+**Client IP probe, 2026-11-07.** FC passes the caller's own `X-Forwarded-For` through: 30 requests sent with
+`198.51.100.77` drew a 429 on the 31st, and a request with `198.51.100.78` then got a 400, not a 429, so a made-up
+header chose the bucket. The limiter therefore keys on the LAST entry, which the gateway appends. Confirmed after the
+`13ab1f6` deploy: 61 requests from one host, each with a different made-up header, drew 60 × 400 then a 429
+(2026-11-07). On 2026-11-08, after the Mac exhausted its 20 `/api/chat` requests (21st → 429), a request from a second
+host (the VPS) got a 400 and the Mac's next got a 429, so separate callers get separate buckets. Both probes sent
+non-JSON bodies, which return 400 before any Qwen or MCP call. Limits are per process, so a caller spread across
+several FC instances can exceed them by that factor.
+
+**Rollback.** Redeploy the previous FC code at `158328c`, or `cb3999ba` for the Phase 1 code. Both are code-only. The web
+allowlist additions are harmless to older plans. `SPEND_CAP_TURNS_PER_HOUR` is an environment variable and stays at
+600 unless `s.yaml` is redeployed with the old value.

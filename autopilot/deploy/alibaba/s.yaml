@@ -37,7 +37,18 @@ resources:
         # degrades silently to "citations pending". It is also what
         # makes handoffs attributable — see tools/handoff.ts.
         CORPUS_API_KEY: ${env(CORPUS_API_KEY)}
-        SPEND_CAP_TURNS_PER_HOUR: "120"
+        # Per-process requests per hour, shared by plan, handoff and chat. Per-IP limits (60/h plan, 120/h handoff, 20/h
+        # chat, keyed on the last X-Forwarded-For entry) are in src/server.ts and need no setting; PLAN_PER_IP_PER_HOUR,
+        # HANDOFF_PER_IP_PER_HOUR and CHAT_PER_IP_PER_HOUR override them.
+        SPEND_CAP_TURNS_PER_HOUR: "600"
+      # Request logs. Without this FC keeps none, so a plan's cost could not be read back (corpus plan review,
+      # 2026-11-01). `auto` reuses the account's FC log project or creates it; src/request-log.ts writes one JSON
+      # line per /api/plan and /api/plan/handoff request (tool calls, Qwen tokens, status, duration; no activity,
+      # city or other free text). Set the logstore's retention to 30 days. See deploy/alibaba/README.md.
+      # `auto` created this project and logstore on the 2026-11-07 deploy; pinned so later deploys reuse them.
+      logConfig:
+        project: serverless-us-west-1-6de9fcef-7437-56d8-9cbe-0163f9c6ff20
+        logstore: default-logs
       code: ../..
       triggers:
         - triggerName: http

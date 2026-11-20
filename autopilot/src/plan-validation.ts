@@ -18,13 +18,19 @@ export const STATES: Record<string, string> = Object.fromEntries([
 
 export const CAMPAIGN_KEYS = ["utm_source", "utm_medium", "utm_campaign", "utm_content", "utm_term"] as const;
 const FIELDS = ["mode", "activity", "operatingState", "operatingCity", "formationState", "entityType", "campaign"];
+/** Fields a client may send but need not: older web builds omit them. */
+const OPTIONAL_FIELDS = ["ownerAbroad"];
 export function record(v: unknown): v is Record<string, unknown> {
   return !!v && typeof v === "object" && !Array.isArray(v);
 }
 
-export function validatePlanInput(v: unknown): PlanInput {
+/** A PlanInput after validation: the optional wire field is always present and boolean. */
+export type ValidPlanInput = PlanInput & { ownerAbroad: boolean };
+
+export function validatePlanInput(v: unknown): ValidPlanInput {
   const bad = () => { throw new PlanError(400, "Invalid planning input."); };
-  if (!record(v) || Object.keys(v).some(k => !FIELDS.includes(k)) || FIELDS.some(k => !Object.hasOwn(v, k))) return bad();
+  if (!record(v) || Object.keys(v).some(k => !FIELDS.includes(k) && !OPTIONAL_FIELDS.includes(k)) || FIELDS.some(k => !Object.hasOwn(v, k))) return bad();
+  if (Object.hasOwn(v, "ownerAbroad") && typeof v.ownerAbroad !== "boolean") return bad();
   if (!["exploring", "ready", "formed"].includes(v.mode as string)) return bad();
   if (v.entityType !== null && v.entityType !== "llc" && v.entityType !== "nonprofit") return bad();
   for (const key of ["formationState", "operatingState"]) {
@@ -34,5 +40,5 @@ export function validatePlanInput(v: unknown): PlanInput {
   if (typeof v.operatingCity !== "string" || v.operatingCity.length > 100 || /[\x00-\x1f\x7f]/.test(v.operatingCity)) return bad();
   if (!record(v.campaign) || Object.keys(v.campaign).some(k => !CAMPAIGN_KEYS.includes(k as typeof CAMPAIGN_KEYS[number]))) return bad();
   if (Object.values(v.campaign).some(s => typeof s !== "string" || s.length > 100 || !/^[A-Za-z0-9_.~-]*$/.test(s))) return bad();
-  return { ...v, activity: v.activity.replace(/\s+/g, " ").trim(), operatingCity: v.operatingCity.trim(), campaign: { ...v.campaign } } as PlanInput;
+  return { ...v, activity: v.activity.replace(/\s+/g, " ").trim(), operatingCity: v.operatingCity.trim(), campaign: { ...v.campaign }, ownerAbroad: v.ownerAbroad === true } as ValidPlanInput;
 }

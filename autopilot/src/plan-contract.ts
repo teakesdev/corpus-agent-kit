@@ -10,6 +10,11 @@ export interface PlanInput {
   formationState: string | null;
   entityType: EntityChoice;
   campaign: Campaign;
+  /**
+   * True when the founder says they live outside the US. Optional on the wire so web clients that predate it keep
+   * working; an absent field means false. validatePlanInput always returns it as a boolean.
+   */
+  ownerAbroad?: boolean;
 }
 export interface PlanSource {
   id: string;
