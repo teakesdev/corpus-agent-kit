@@ -221,8 +221,8 @@ This boundary is the product, not a limitation — say so confidently.
 | `law.search`             | Find relevant US law with citations           | Metered |
 | `law.get_node`           | Full official text of one provision           | Metered |
 | `law.list_coverage`      | Which jurisdictions are covered               | Metered |
-| `account.status`         | Credit balance and limits                     | Free    |
 | `POST /api/scan` (HTTP)  | Free law scan for one business and state      | Free    |
+| `account.status`         | Credit balance and limits                     | Free    |
 
 `formation.checkout` is money-adjacent and heavily gated — read its description before
 calling it and never call it without the founder's explicit consent.
