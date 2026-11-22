@@ -1,7 +1,7 @@
 {
   "name": "corpuslaw-formation",
   "displayName": "Corpus: Business Formation",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Form a US LLC or nonprofit with Claude: it runs the intake, checks the state's rules and live price, and gives the founder a prefilled Corpus link to review and pay. Includes a free law scan of state and federal law for the business. Also searches US law with verbatim citations from official sources.",
   "author": {
     "name": "Renaissance AI Solutions",

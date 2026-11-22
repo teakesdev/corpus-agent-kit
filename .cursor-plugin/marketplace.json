@@ -6,7 +6,7 @@
   },
   "metadata": {
     "description": "US legal research and business-formation tools for coding agents and Grok Bot, from Corpus.",
-    "version": "0.1.0",
+    "version": "0.2.0",
     "pluginRoot": "plugins"
   },
   "plugins": [
@@ -14,7 +14,7 @@
       "name": "corpus",
       "source": "corpus",
       "description": "Search and cite US law from official sources, and run an LLC or nonprofit formation intake end to end. Bundles formation + research skills plus the hosted Corpus MCP server. Never auto-files; the founder pays by hosted Stripe link or USDC and confirms by email; filing still needs human approval.",
-      "version": "0.1.0",
+      "version": "0.2.0",
       "author": {
         "name": "Corpus",
         "url": "https://corpuslaw.us"

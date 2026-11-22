@@ -1,7 +1,7 @@
 {
   "name": "@corpuslaw/mcp-server",
-  "version": "0.1.0",
-  "description": "MCP server giving any AI agent 700,000+ provisions of US federal, state and municipal law with verbatim citations \u2014 plus LLC/nonprofit formation intake. Thin client of corpuslaw.us.",
+  "version": "0.1.1",
+  "description": "MCP server giving any AI agent 2.9 million+ provisions of US federal, state and municipal law with verbatim citations \u2014 plus LLC/nonprofit formation intake. Thin client of corpuslaw.us.",
   "keywords": [
     "mcp",
     "model-context-protocol",
@@ -20,7 +20,7 @@
   ],
   "license": "Apache-2.0",
   "author": "Corpus (https://corpuslaw.us)",
-  "homepage": "https://github.com/teakesdev/corpus-agent-kit#readme",
+  "homepage": "https://corpuslaw.us",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/teakesdev/corpus-agent-kit.git",
