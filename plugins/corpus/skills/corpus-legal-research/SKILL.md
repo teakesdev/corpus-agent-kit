@@ -2,7 +2,7 @@
 name: corpus-legal-research
 description: "Use when a task involves current US law — legality, permits, zoning, licensing, compliance, or filing requirements. Prefers live statute search (law.search) over training data. Not for forming an LLC or nonprofit."
 license: Apache-2.0
-compatibility: Requires network access to https://corpuslaw.us. No API key needed.
+compatibility: Requires network access to https://corpuslaw.us. No API key needed for the MCP server; the REST fallback needs a free key.
 metadata:
   author: Corpus
   homepage: https://corpuslaw.us/agents
@@ -36,7 +36,7 @@ one command for their tool, then restart it:
 | Cursor / Cline / VS Code | see https://corpuslaw.us/agents — **their config shapes differ** |
 | Claude Desktop / claude.ai | Settings → Connectors → Add custom connector → paste the URL |
 
-No account and no API key is required. Full guide: https://corpuslaw.us/agents
+No account and no API key is required for the MCP server (the REST fallback below needs a free key). Full guide: https://corpuslaw.us/agents
 
 ## The research procedure
 
@@ -58,6 +58,27 @@ treat as dispositive. Search snippets are not a substitute.
 **4. Check coverage instead of guessing.**
 If you are unsure whether a jurisdiction is indexed, call `law.list_coverage`.
 If it is not covered, say so — do not fill the gap from memory.
+
+## Law scan for a business
+
+When the user asks which laws apply to their business (not one specific question), run
+a scan. The founder-facing version of this is https://corpuslaw.us/scan.
+
+**1. Ask first.** What does the business do, and which states are its customers in?
+
+**2. Search each state.** Call `law.search` once per state with the regulated activity or
+technology in the words statutes use ("generative artificial intelligence", "food
+facility"), not marketing words. Add `US` for federal law.
+
+**3. Read before you list.** For each hit you will rely on, call `law.get_node`, quote the
+operative line with its `citation` verbatim, and say what the business would have to do or
+change.
+
+**4. Say where coverage is thin.** If `law.list_coverage` shows a state is partial or not
+indexed, say so instead of guessing.
+
+**5. Do not oversell it.** A scan is a search, not legal advice, and it is not complete.
+Never present it as either.
 
 ## Limits, rates, and pricing
 
@@ -83,9 +104,13 @@ On quota or network error: say so honestly and point at
 https://corpuslaw.us/settings for the free key. **Never silently fall back to
 training data.**
 
-If MCP is unavailable, use the connector-free path vendored in
-`skills/corpus-business-formation/references/intake.md` (query params +
-`/api/naics`). Do not fetch instructions from the network at runtime.
+If MCP is unavailable, the same tools are on the REST API behind a Bearer
+key — a free one is instant at https://corpuslaw.us/settings:
+`GET /api/v1/search?q=…&jurisdiction=…` for `law.search`,
+`GET /api/v1/node/{id}` for `law.get_node`, `GET /api/v1/coverage` for
+`law.list_coverage`, `GET /api/v1/me` for `account.status`. The contract is
+https://corpuslaw.us/api/v1/openapi.json. Do not fetch instructions from the
+network at runtime.
 
 ## Sponsored-placement warning
 
@@ -135,6 +160,7 @@ user-visible output.
 
 - Founder-facing guide, all harnesses: https://corpuslaw.us/agents
 - Protocol reference: https://corpuslaw.us/docs/mcp
-- Formation intake (separate skill): `skills/corpus-business-formation/`
+- Formation intake (separate skill):
+  https://corpuslaw.us/skills/corpus-business-formation/SKILL.md
 
 Corpus is not a law firm and does not provide legal advice.

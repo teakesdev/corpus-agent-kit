@@ -53,10 +53,12 @@ Corpus. Contact details use the URL fragment in connector-free handoffs; other
 fields use the query string. The skill never collects a Social Security Number.
 The intake instructions are bundled in the package, not fetched at runtime.
 
-Creating an order or USDC payment request requires the founder to confirm the
-exact amount in the current turn. USDC must come from a self-custody wallet;
-refunds go to the sending wallet. Email confirmation is required within 48 hours,
-and every filing still requires human approval of the exact filing payload.
+Creating an order (a hosted Stripe payment link by default, a USDC pay request when
+the founder chooses it, or a prepaid formation-pack redemption) requires the founder
+to confirm the exact amount in the current turn. USDC must come from a self-custody
+wallet; refunds go to the sending wallet. Email confirmation is required within 48
+hours, and a human approves the exact filing payload unless the founder waives review
+on an expedited filing.
 `formation.handoff` alone creates no order or charge.
 
 ## Build from a Git ref

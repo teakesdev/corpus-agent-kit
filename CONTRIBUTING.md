@@ -12,17 +12,17 @@ accept changes here:
 |---|---|
 | `autopilot/`, `mcp-server/`, `widget/` | Open to contributions |
 | `autopilot/src/tools/naics-data.ts` | Mirrored from upstream — file an issue instead |
-| `skills/corpus-business-formation/`, `skills/corpus-legal-research/` | Canonical skills — edit here |
+| `skills/*/SKILL.md`, `skills/corpus-business-formation/references/` | Mirrored from upstream `packages/skills/` (hashes in `skills/UPSTREAM.sha256`) — file an issue instead |
 | `plugins/corpus/skills/` | Generated copies — never edit; run `scripts/check-plugin-skill-drift.sh --write` |
 | `plugins/corpus-codex/skills/` | Generated (canonical skills + `overlays/openai/snippets`) — never edit; run `python3 scripts/sync-codex-skills.py` |
-| `overlays/openai/snippets/` | The OpenAI-only $0-formation first-response notice — edit here, then regenerate |
+| `overlays/openai/snippets/` | The OpenAI-only $0-formation first-response notice — mirrored from upstream; file an issue instead |
 
 ## Development
 
 ```bash
 npm install
 npm run build                       # all workspaces
-npm run check:plugin-skill-drift    # generated plugin skills vs canonical
+npm run check:plugin-skill-drift    # mirrored skills vs UPSTREAM.sha256, generated plugin skills vs skills/
 cd autopilot && npx vitest run      # 39 tests
 cd mcp-server && npm test           # 6 tests
 ```

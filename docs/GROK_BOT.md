@@ -10,9 +10,10 @@ install the formation skill, and keep Hermes / Claude / Codex targets intact.
 https://corpuslaw.us/api/mcp
 ```
 
-Streamable HTTP. Ten tools, including `formation.requirements`,
-`formation.lookup_naics`, `formation.handoff`, `formation.checkout`, and
-`formation.payment_status`. Formation tools are free
+Streamable HTTP. Tools include `formation.requirements`,
+`formation.lookup_naics`, `formation.check_name`, `formation.handoff` and
+`formation.status`, plus `formation.checkout` and `formation.payment_status` when
+agent checkout is enabled. Formation tools are free
 (no credit burn). Research is rate-limited anonymously; optional Bearer key
 from https://corpuslaw.us/settings raises the quota.
 
@@ -26,12 +27,12 @@ from https://corpuslaw.us/settings raises the quota.
 
 Verified dry-run (2026-09-10): `formation.requirements` for MS LLC returns the
 live checklist and all-in pricing; `formation.handoff` returns **COMPLETE** and
-a prefilled approval link. Agents never auto-file (GATE 2 human approval). USDC pay is email-confirmed; filing still needs human approval. Sept 15 demo stops at the handoff link — USDC pay is optional.
+a prefilled approval link. Agents never auto-file (GATE 2 human approval). Checkout returns a hosted Stripe link by default or USDC when the founder asks; payment is email-confirmed and filing still needs human approval unless the founder waives review on an expedited filing.
 
 ## Private rehearsal connector
 
-The public endpoint now lists ten tools, including `formation.checkout` and
-`formation.payment_status`. The eight-tool rehearsal-only state observed on
+The public endpoint lists `formation.checkout` and `formation.payment_status`
+when agent checkout is enabled. The eight-tool rehearsal-only state observed on
 2026-09-12 is historical; it is not the current public install contract.
 
 If a deployment is explicitly configured in rehearsal mode, its checkout tools
@@ -95,7 +96,7 @@ Template contents (no credentials):
 - MCP URL: `https://corpuslaw.us/api/mcp`
 - Pointer to `skills/corpus-business-formation/`
 - Starter prompt: *Create an LLC for Acme AI in Mississippi.*
-- Guardrail text: never auto-file; stop at the approval / handoff link; USDC pay is email-confirmed if used
+- Guardrail text: never auto-file; stop at the approval / handoff link unless the founder consents to checkout; payment (Stripe link or USDC) is email-confirmed
 
 
 ## Demo punchline

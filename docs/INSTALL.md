@@ -163,19 +163,23 @@ design and worth knowing up front:
 The connector-free intake procedure is vendored at
 `skills/corpus-business-formation/references/intake.md` and is not fetched from the
 network at runtime; updates to it arrive through this repository. `formation.checkout`
-(USDC payment) may only be called after the founder confirms the exact amount in the
-current turn.
+(hosted Stripe link, USDC, or a prepaid formation pack) may only be called after the
+founder confirms the exact amount in the current turn.
 
 ## Gates
 
 - **Never auto-files.** Filing still requires human GATE 2 approval (hash-bound payload).
-- **USDC pay** may be email-confirmed only (no extra human review of the payment). Card checkout remains on the web UI.
-- **MCP pay tools.** `formation.checkout` creates the order and returns a USDC (Solana)
-  payment request; `formation.payment_status` polls it (awaiting / paid / expired /
-  underpaid / held, plus email-confirmation state). The founder must pay from a
-  self-custody wallet — never an exchange withdrawal; refunds go only to the sending
-  wallet — and confirm via the emailed link within 48h; nothing files before that
-  confirmation and human review. A queue-lane order returns a submission promise the
+- **Payment** is the founder's: a hosted Stripe link (default) or, when they choose it, USDC on Solana; the agent never handles payment credentials.
+- **MCP pay tools.** `formation.checkout` creates the order and returns a hosted Stripe
+  link by default, a USDC (Solana) pay request when the founder explicitly chooses it,
+  or redeems a prepaid formation pack (`rail: "pack"`, owner's formation-scoped key);
+  `formation.payment_status` polls it (awaiting / processing / paid / expired / failed /
+  underpaid / held / refunded, plus email-confirmation state) and `formation.status`
+  follows the order after payment. USDC must come from a self-custody wallet — never an
+  exchange withdrawal; refunds go only to the sending wallet. The founder confirms via
+  the emailed link within 48h or the order goes to the refund queue; nothing files
+  before that confirmation and human review (unless the founder waives review on an
+  expedited filing). The REST equivalent is `POST /api/v1/formation/orders`. A queue-lane order returns a submission promise the
   founder must approve before it is accepted. The tax-ID add-on cannot be bought
   through MCP. Order creation is consent-gated; `formation.handoff` alone never
   creates an order or a charge.
