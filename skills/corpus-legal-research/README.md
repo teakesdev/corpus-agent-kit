@@ -40,8 +40,14 @@ user asks what US law currently says.
 
 ## Distribution note
 
-This is the canonical copy. The Hermes plugin at `plugins/corpus/` ships a
-generated copy of this skill; edit here, then run
-`scripts/check-plugin-skill-drift.sh --write`.
+`SKILL.md` here is a **one-way mirror** of the Corpus monorepo
+(`packages/skills/corpus-legal-research/`) and is not edited in this repo: a fix
+belongs upstream first, then comes back down as a re-mirror. `skills/UPSTREAM.sha256`
+records the mirrored bytes and `npm test` fails if they change here. This README is
+the exception: it describes *this* repo, so it lives here.
+
+The plugins at `plugins/corpus/` and `plugins/corpus-codex/` ship generated copies
+(the mirrored bytes plus a provenance stamp). After a re-mirror, run
+`scripts/check-plugin-skill-drift.sh --write` and `python3 scripts/sync-codex-skills.py`.
 
 Apache-2.0.

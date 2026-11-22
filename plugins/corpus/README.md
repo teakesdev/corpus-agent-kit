@@ -64,9 +64,9 @@ documented checkout comparison that names one competitor
 ## Limits
 
 - Corpus provides legal information, not legal advice, and is not a law firm.
-- The assistant never pays or files anything. Card checkout happens on corpuslaw.us. The optional
-  USDC path creates an unpaid order and a payment request that the founder pays from their own wallet
-  and then confirms by email. A person at Corpus reviews each filing before it reaches the state; a
+- The assistant never pays or files anything. With the founder's consent it can create an order whose
+  payment the founder completes: a hosted Stripe link (card, Apple Pay, Google Pay, Link) by default,
+  or USDC from the founder's own wallet when they ask for it. The founder then confirms by email. A person at Corpus reviews each filing before it reaches the state; a
   founder can waive that review only on an expedited filing, where that option is offered.
 - Free to start: 250 searches a month without an account, 1,000 with a free key from
   corpuslaw.us/settings. Formation tools are always free.

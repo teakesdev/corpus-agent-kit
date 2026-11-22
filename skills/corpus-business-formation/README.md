@@ -61,7 +61,10 @@ a fix belongs upstream first, then comes back down as a re-mirror. This README i
 the exception: it describes *this* repo, so it lives here.
 
 The Hermes plugin at `plugins/corpus/` ships a generated copy of the skill (the
-mirrored bytes plus a provenance stamp). After a re-mirror, run
-`scripts/check-plugin-skill-drift.sh --write`.
+mirrored bytes plus a provenance stamp), and `plugins/corpus-codex/` adds the
+OpenAI-only snippets from `overlays/openai/snippets/` (mirrored too).
+`skills/UPSTREAM.sha256` records the mirrored bytes and `npm test` fails if they change
+here. After a re-mirror, run `scripts/check-plugin-skill-drift.sh --write` and
+`python3 scripts/sync-codex-skills.py`.
 
 Apache-2.0.

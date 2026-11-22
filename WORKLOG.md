@@ -156,3 +156,17 @@ Git's resolved tag ref, including differently named tags; isolated repository
 tests cover invalid names/versions, a valid annotated tag, and byte stability
 despite working-tree edits (3 tests passed). CI now builds twice and compares
 archives. These fixes do not touch user tags or publish a release.
+
+## 2026-11-22 — skill copies re-mirrored from Corpus `packages/skills`
+
+The kit's skills had drifted both ways from upstream. Kit-only changes (the free
+law scan section in the formation skill, the Hermes `plugins doctor` lines in
+`harness-setup.md`) were ported upstream first in teakesdev/Corpus, then the
+upstream bytes were mirrored back here. That brings in the live checkout contract
+(hosted Stripe by default, USDC on request, prepaid formation packs,
+`formation.status`, `formation.check_name`, the REST orders API, the expedited
+review waiver) and 250 anonymous searches. `skills/UPSTREAM.sha256` now records
+the mirrored bytes and `npm test` fails when one changes here; Corpus fails its own
+test when upstream changes without a re-mirror. READMEs, install docs and the
+Cursor descriptions no longer describe a USDC-only checkout. Nothing was published
+outside GitHub; external listings still carry the old copy until republished.

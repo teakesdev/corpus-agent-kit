@@ -1,0 +1,8 @@
+# Mirrored byte-for-byte from teakesdev/Corpus packages/skills. Do not edit these files here:
+# change them upstream, then re-mirror with Corpus's scripts/mirror-kit-skills.mjs.
+c6bf856f222e5f88357ac85fb1d104baa10947cca8eece08e067f089c16824f1  overlays/openai/snippets/first-response.md
+f997708149077547ae346652ca065228bb0d0f906df19d9672a37262459a7390  overlays/openai/snippets/hard-rule.md
+3f110f957b72f8fc1a1825196f8c26f6740a33cc6ea55dbcc8f8f7961c4b7a4c  skills/corpus-business-formation/SKILL.md
+c88374361ed809c69fc37bd914d8b54641004c9479b811e8fc01cca9534f1051  skills/corpus-business-formation/references/harness-setup.md
+fbca564547d8e916fca41947bc4f32593201b6beb23e8e010fd326df1569a1ef  skills/corpus-business-formation/references/intake.md
+681c95eeb3be5a8d531519e4ba12c01600f4fd7c6d5aa7e81fd55d82fef6650f  skills/corpus-legal-research/SKILL.md

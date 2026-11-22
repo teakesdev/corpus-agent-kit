@@ -39,7 +39,7 @@ no build, no local process:
 That is the whole setup. Ask your agent *"what does Mississippi require to form
 an LLC?"* and it will answer from live statutes with citations you can check.
 
-**Research is free to start:** 100 searches/month anonymously. A
+**Research is free to start:** 250 searches/month anonymously. A
 [free API key](https://corpuslaw.us/settings) — instant, self-serve, no waiting
 list — raises it to 1,000/month. Send it as `Authorization: Bearer <key>`.
 
@@ -47,7 +47,7 @@ list — raises it to 1,000/month. Send it as `Authorization: Bearer <key>`.
 
 Grok Bot and Cursor speak remote MCP connectors. Point one at
 `https://corpuslaw.us/api/mcp`, then ask *Create an LLC for Acme AI in
-Mississippi.* Formation tools never auto-file: handoff stops at a human approval link. USDC pay is email-confirmed; filing still needs human approval.
+Mississippi.* Formation tools never auto-file. The founder pays through a hosted Stripe link (card, Apple Pay, Google Pay, Link) or, when they ask for it, USDC on Solana, and confirms by email; a human still reviews the filing unless the founder waives review on an expedited filing.
 
 Optional: install [`skills/corpus-business-formation/`](skills/corpus-business-formation/)
 for a guided intake. For Cursor Marketplace listing, see
@@ -144,22 +144,29 @@ Clone and build — see [Quickstart](#quickstart) below.
 
 ---
 
-## The ten tools
+## The tools
 
 | Tool | What it does |
 |---|---|
-| `law.search` | Hybrid semantic + keyword search over 2.1M+ provisions |
+| `law.search` | Keyword search by default (hybrid or semantic on request) over 2.9M+ provisions |
 | `law.get_node` | Full official text of one provision |
 | `law.list_coverage` | Which jurisdictions are indexed, and how deeply |
 | `formation.requirements` | A state's exact field checklist, quirks, live pricing |
-| `formation.compare` | 19 formation services on price, renewals and agent capability — Corpus included, same rubric |
+| `formation.compare` | 20 LLC formation services (plus 1 adjacent) on price, renewals and agent capability — Corpus included, same rubric |
 | `formation.lookup_naics` | Find an industry code from a plain-English description |
+| `formation.check_name` | Preliminary check of a proposed company name (not a guarantee) |
 | `formation.handoff` | Validate a draft → prefilled, human-approved handoff link |
-| `formation.checkout` | Create the founder's order + USDC (Solana) payment request — self-custody wallet, email confirmation within 48h, human review before any filing |
-| `formation.payment_status` | Poll the USDC payment: awaiting / paid / expired / underpaid / held, plus email-confirmation state |
+| `formation.checkout` | Create the founder's order with their explicit consent and return a hosted Stripe payment link (default), a USDC (Solana) pay request when the founder chooses it, or redeem a prepaid formation pack with the owner's formation-scoped key |
+| `formation.payment_status` | Poll the payment: awaiting / processing / paid / expired / failed / underpaid / held / refunded, plus email-confirmation state |
+| `formation.status` | Follow a paid order through review, submission to the state, acceptance and the certificate |
 | `account.status` | Quota, tier, and credit balance |
 
 Formation tools are **never metered** — they stay free with or without a key.
+`formation.checkout` and `formation.payment_status` are listed when agent checkout is
+enabled for the connection, and `formation.webhook` (signed order webhooks instead of
+polling `formation.status`) when webhooks are. The same order flow is on the REST API as
+`POST /api/v1/formation/orders`, under the same consent rules
+([OpenAPI](https://corpuslaw.us/api/v1/openapi.json)).
 
 ## Coverage
 
@@ -233,14 +240,17 @@ a snapshot of the exact filing payload, cryptographically bound to a hash of tha
 payload. If the payload changes by a single byte after approval, the gate rejects
 it. The agent is architecturally incapable of bypassing filing approval.
 
-**Spend — updated.** Agents may settle formation (and related) charges in
-**USDC (Solana)** with **email confirmation only** — no extra human review of the
-payment itself. Card / web checkout human flows still exist on corpuslaw.us.
-Docs refer to this as a USDC checkout / pay request via Corpus until the exact
-MCP tool id is named.
+**Spend — updated 2026-11-22.** With the founder's explicit consent to the exact
+amount, `formation.checkout` returns a **hosted Stripe link** by default (cards,
+Apple Pay, Google Pay, Link), a **USDC (Solana)** pay request when the founder asks
+for crypto (self-custody wallet only; an open USDC request cannot switch back to
+Stripe), or redeems a **prepaid formation pack** with the owner's formation-scoped
+key. The founder confirms by email within 48h of paying, or the order goes to the
+refund queue. Payment confirmation is not filing: a human still reviews the
+payload, unless the founder waives review on an expedited filing.
 
 **Sept 15 demo path — unchanged.** `formation.requirements` → draft →
-`formation.handoff` COMPLETE → approval link. Completing USDC pay is **not**
+`formation.handoff` COMPLETE → approval link. Completing payment is **not**
 required for the livestream demo.
 
 ## Quickstart

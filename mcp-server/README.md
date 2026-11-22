@@ -23,8 +23,8 @@ npx -y @corpuslaw/mcp-server
 ```
 
 `CORPUS_API_KEY` is optional but recommended — [free and instant](https://corpuslaw.us/settings).
-Anonymous access gets 100 searches/month per IP; a free key gets 1,000/month at
-30/min.
+Anonymous access gets 250 searches/month per IP; a free key gets 1,000/month at
+30/min. Call `account.status` for the live numbers.
 
 > **If your client speaks HTTP MCP**, skip this package entirely and point it
 > straight at `https://corpuslaw.us/api/mcp`. This bridge exists for stdio-only
@@ -32,14 +32,19 @@ Anonymous access gets 100 searches/month per IP; a free key gets 1,000/month at
 
 ## Tools
 
-`law.search` · `law.get_node` · `law.list_coverage` · `formation.requirements` ·
-`formation.compare` · `formation.lookup_naics` · `formation.handoff` ·
-`formation.checkout` · `formation.payment_status` · `account.status`
+The bridge forwards whatever the hosted server lists, so this follows the live contract:
+`law.search` · `law.get_node` · `law.list_coverage` · `account.status` ·
+`formation.requirements` · `formation.compare` · `formation.lookup_naics` ·
+`formation.check_name` · `formation.handoff` · `formation.status`, plus
+`formation.checkout` · `formation.payment_status` when agent checkout is enabled and
+`formation.webhook` when signed webhooks are.
 
-Formation tools are never metered. `formation.checkout` creates an order and USDC
-payment request only after explicit same-turn amount confirmation and consent.
-The founder pays from a self-custody wallet and confirms by email; filing remains
-human-reviewed. Card payment uses the web handoff.
+Formation tools are never metered. `formation.checkout` creates an order only after
+explicit same-turn amount confirmation and consent, and returns a hosted Stripe link
+by default, a USDC (Solana) pay request when the founder chooses it, or a prepaid
+formation-pack redemption with the owner's formation-scoped key. The founder confirms
+by email; filing remains human-reviewed unless the founder waives review on an
+expedited filing.
 
 ## Environment
 
