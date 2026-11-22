@@ -344,6 +344,20 @@ anonymous allotment.
 > Use the full scoped name. `npx corpus-mcp` resolves to an unrelated package
 > on npm — only `@corpuslaw/mcp-server` is ours.
 
+#### Official MCP registry
+
+`server.json` at the repo root lists Corpus in the official MCP registry as
+`io.github.teakesdev/corpus`, with the hosted endpoint as a remote and this
+bridge as the npm package. Its versions move with the `mcp-server` train
+(`node scripts/check-versions.mjs`). The registry checks that the npm package
+carries the same `mcpName`, so publish the package first:
+
+```bash
+cd mcp-server && npm publish --access public   # 0.1.1 is the first version with mcpName
+cd .. && mcp-publisher login github            # as teakesdev
+mcp-publisher publish                          # reads ./server.json
+```
+
 <details>
 <summary>Running from a clone instead</summary>
 

@@ -1,0 +1,42 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-09-29/server.schema.json",
+  "name": "io.github.teakesdev/corpus",
+  "title": "Corpus: US law search, down to the city",
+  "description": "Search US federal, state and city law with checkable citations, and form LLCs. No key to start.",
+  "websiteUrl": "https://corpuslaw.us/law-api",
+  "repository": {
+    "url": "https://github.com/teakesdev/corpus-agent-kit",
+    "source": "github",
+    "subfolder": "mcp-server"
+  },
+  "version": "0.1.1",
+  "packages": [
+    {
+      "registryType": "npm",
+      "registryBaseUrl": "https://registry.npmjs.org",
+      "identifier": "@corpuslaw/mcp-server",
+      "version": "0.1.1",
+      "transport": { "type": "stdio" },
+      "environmentVariables": [
+        {
+          "name": "CORPUS_API_KEY",
+          "description": "Optional. A free key from https://corpuslaw.us/settings raises the monthly allowance and rate limit.",
+          "isRequired": false,
+          "isSecret": true
+        },
+        {
+          "name": "CORPUS_BASE_URL",
+          "description": "Optional. Defaults to https://corpuslaw.us.",
+          "isRequired": false,
+          "isSecret": false
+        }
+      ]
+    }
+  ],
+  "remotes": [
+    {
+      "type": "streamable-http",
+      "url": "https://corpuslaw.us/api/mcp"
+    }
+  ]
+}

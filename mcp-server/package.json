@@ -1,6 +1,7 @@
 {
   "name": "@corpuslaw/mcp-server",
   "version": "0.1.1",
+  "mcpName": "io.github.teakesdev/corpus",
   "description": "MCP server giving any AI agent 2.9 million+ provisions of US federal, state and municipal law with verbatim citations \u2014 plus LLC/nonprofit formation intake. Thin client of corpuslaw.us.",
   "keywords": [
     "mcp",

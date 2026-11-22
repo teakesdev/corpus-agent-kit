@@ -45,6 +45,8 @@ function trains(root) {
       ['mcp-server/package.json', ['version']],
       ['package-lock.json', ['packages', 'mcp-server', 'version']],
       ['glama.json', ['version'], true],
+      ['server.json', ['version']],
+      ['server.json', ['packages', '*', 'version']],
     ],
   };
 }
