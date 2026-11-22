@@ -7,7 +7,9 @@
   "scripts": {
     "build": "npm run build --workspaces --if-present",
     "check:plugin-skill-drift": "node scripts/check-upstream-mirror.mjs && bash scripts/check-plugin-skill-drift.sh && python3 scripts/sync-codex-skills.py --check",
-    "test": "npm run check:plugin-skill-drift && npm run test --workspaces --if-present",
-    "typecheck": "npm run typecheck --workspaces --if-present"
+    "check:versions": "node scripts/check-versions.mjs && node --test scripts/tests/check-versions.test.mjs",
+    "test": "npm run check:versions && npm run check:plugin-skill-drift && npm run test --workspaces --if-present",
+    "typecheck": "npm run typecheck --workspaces --if-present",
+    "versions:bump": "node scripts/check-versions.mjs bump"
   }
 }

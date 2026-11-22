@@ -37,6 +37,31 @@ suites. After editing a canonical skill, regenerate the plugin copies:
 scripts/check-plugin-skill-drift.sh --write
 ```
 
+## Versions
+
+The kit releases on two version trains, and `npm run check:versions` (part of
+`npm test`) fails when any file in a train disagrees:
+
+| Train | Files |
+|---|---|
+| `plugins` | `gemini-extension.json`, `qwen-extension.json`, `kimi.plugin.json`, both `metadata.version` and every plugin entry in `.claude-plugin/marketplace.json` and `.cursor-plugin/marketplace.json`, and every `plugin.json` under `plugins/*/` (portable, `.claude-plugin`, `.cursor-plugin`, `.codex-plugin`) |
+| `mcp-server` | `mcp-server/package.json`, its entry in `package-lock.json`, and `glama.json` if it ever carries a version |
+
+The trains move separately: a listing republish bumps `plugins`, an npm release
+bumps `mcp-server`. The root `package.json`, `autopilot/` and `widget/` are never
+published and are not tracked. To bump a train, set every file at once:
+
+```bash
+npm run versions:bump -- plugins 0.3.0
+npm run versions:bump -- mcp-server 0.1.2
+```
+
+It edits only the version strings (one line per field) and refuses, changing
+nothing, if another `"version"` field in a file shares the old value. A new
+package under `plugins/` is picked up without editing the script. The Codex
+archive is still built from the tag `corpus-openai-v<version>`, which must match
+the `plugins` train (see [docs/OPENAI_PLUGIN.md](docs/OPENAI_PLUGIN.md)).
+
 ## Ground rules
 
 - **Never collect an SSN.** See [SECURITY.md](SECURITY.md).
