@@ -20,3 +20,5 @@ credentials.json
 *.log
 .DS_Store
 autopilot/package-lock.json
+__pycache__/
+*.pyc

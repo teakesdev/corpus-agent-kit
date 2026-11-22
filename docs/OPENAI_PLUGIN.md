@@ -9,9 +9,9 @@ anonymously. The packaged connector has no authentication or rehearsal headers.
 Verify the checksum next to the archive before extracting it:
 
 ```bash
-shasum -a 256 -c corpus-openai-0.1.0.zip.sha256
-unzip corpus-openai-0.1.0.zip
-codex plugin marketplace add "$(pwd)/corpus-openai-0.1.0"
+shasum -a 256 -c corpus-openai-0.2.0.zip.sha256
+unzip corpus-openai-0.2.0.zip
+codex plugin marketplace add "$(pwd)/corpus-openai-0.2.0"
 codex plugin add corpus@corpus-agent-kit
 ```
 
@@ -66,11 +66,11 @@ on an expedited filing.
 From a source checkout, after committing the package changes:
 
 ```bash
-python3 scripts/package-openai-plugin.py corpus-openai-v0.1.0
+python3 scripts/package-openai-plugin.py corpus-openai-v0.2.0
 ```
 
 The command requires an existing ref and reads only files from that commit.
-It writes `dist/corpus-openai-0.1.0.zip` and its `.sha256` file. Repeating the
+It writes `dist/corpus-openai-0.2.0.zip` and its `.sha256` file. Repeating the
 command with the same ref produces identical bytes, even with working-tree edits.
 For CI or a pre-release check, pass `HEAD` instead. A release tag must use
 `corpus-openai-v<manifest version>` and point at the intended release commit.

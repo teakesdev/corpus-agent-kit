@@ -8,7 +8,7 @@ Open-source connectors for [Corpus Law](https://corpuslaw.us). Your agent runs
 the whole US LLC or nonprofit formation intake: it checks what the state
 requires, finds the NAICS code, compares filing options and prepares the
 filing. Every filing stops at a human approval gate, where a person reviews it
-and pays. The same tools give the agent cited search over 2.1M+ provisions of
+and pays. The same tools give the agent cited search over 2.9M+ provisions of
 US federal, state and municipal law, so it can answer what rules apply to the
 business with verbatim citations.
 
@@ -170,7 +170,7 @@ polling `formation.status`) when webhooks are. The same order flow is on the RES
 
 ## Coverage
 
-2.1M+ provisions across 68 jurisdictions — federal,
+2.9M+ provisions across 349 jurisdictions — federal,
 state and municipal law, ingested from official sources. Coverage grows, so
 this README does not pin per-jurisdiction counts: call `law.list_coverage` for
 the live list with provision counts and GIS status. It reports honestly when a
@@ -211,7 +211,7 @@ See [docs/architecture.md](docs/architecture.md) for the Mermaid source.
 | Two-lane Qwen routing | ✅ `autopilot/src/` | — |
 | MCP stdio bridge (`corpus-mcp`) | ✅ `mcp-server/` | — |
 | Embeddable widget | ✅ `widget/` | — |
-| Law database (2.1M+ provisions, Aurora) | — | ✅ |
+| Law database (2.9M+ provisions, Postgres) | — | ✅ |
 | Hybrid search engine + `/api/mcp` | — | ✅ |
 | `/formation` checkout + GATE 2 | — | ✅ |
 | Stripe payment + state filing execution | — | ✅ |
