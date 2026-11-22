@@ -24,7 +24,7 @@ npx -y @corpuslaw/mcp-server
 
 `CORPUS_API_KEY` is optional but recommended — [free and instant](https://corpuslaw.us/settings).
 Anonymous access gets 250 searches/month per IP; a free key gets 1,000/month at
-30/min. Call `account.status` for the live numbers.
+30/min, and 5,000/month at 60/min once you form a company through Corpus. Call `account.status` for the live numbers.
 
 > **If your client speaks HTTP MCP**, skip this package entirely and point it
 > straight at `https://corpuslaw.us/api/mcp`. This bridge exists for stdio-only

@@ -41,7 +41,8 @@ an LLC?"* and it will answer from live statutes with citations you can check.
 
 **Research is free to start:** 250 searches/month anonymously. A
 [free API key](https://corpuslaw.us/settings) — instant, self-serve, no waiting
-list — raises it to 1,000/month. Send it as `Authorization: Bearer <key>`.
+list — raises it to 1,000/month, and 5,000/month once you form a company through Corpus.
+Send it as `Authorization: Bearer <key>`.
 
 ### 1b. Grok Bot / Cursor (same hosted MCP)
 

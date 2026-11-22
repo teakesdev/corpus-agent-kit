@@ -69,6 +69,7 @@ documented checkout comparison that names one competitor
   or USDC from the founder's own wallet when they ask for it. The founder then confirms by email. A person at Corpus reviews each filing before it reaches the state; a
   founder can waive that review only on an expedited filing, where that option is offered.
 - Free to start: 250 searches a month without an account, 1,000 with a free key from
-  corpuslaw.us/settings. Formation tools are always free.
+  corpuslaw.us/settings, and 5,000 once a company is formed through Corpus. Formation tools are
+  always free.
 
 Privacy: https://corpuslaw.us/privacy · Support: support@corpuslaw.us · License: Apache-2.0
