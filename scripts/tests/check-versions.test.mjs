@@ -10,7 +10,7 @@ const FILES = [
   'gemini-extension.json', 'qwen-extension.json', 'kimi.plugin.json', 'glama.json', 'package-lock.json',
   '.claude-plugin/marketplace.json', '.cursor-plugin/marketplace.json', 'mcp-server/package.json',
   'plugins/corpus/plugin.json', 'plugins/corpus/.claude-plugin/plugin.json',
-  'plugins/corpus/.cursor-plugin/plugin.json', 'plugins/corpus-codex/.codex-plugin/plugin.json',
+  'plugins/corpus/.cursor-plugin/plugin.json', 'plugins/corpus-codex/.codex-plugin/plugin.json', 'server.json',
 ];
 
 function copyRepo() {
