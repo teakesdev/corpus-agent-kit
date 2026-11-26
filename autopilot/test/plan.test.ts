@@ -6,7 +6,7 @@ import { exactLocalCoverage, parseNode, parseSearch } from "../src/plan-evidence
 import { ABROAD_SOURCES, pricingLineForDisplay, parseNaicsCandidates, officeRuleFromCatalog, principalOfficeBody } from "../src/plan-abroad.js";
 import { clampPlan, MAX_ITEMS, MAX_SOURCES, MAX_WARNINGS, MAX_WARNING_CHARS } from "../src/plan-limits.js";
 import type { PlanItem, PlanSource } from "../src/plan-contract.js";
-import { hostedTool, bounded, MAX_TOOL_BYTES, UnsupportedFormationError } from "../src/plan-tools.js";
+import { hostedTool, bounded, einNoSsnCentsFrom, MAX_TOOL_BYTES, UnsupportedFormationError } from "../src/plan-tools.js";
 import type { ToolCall } from "../src/plan-tools.js";
 import type { PlanMetrics } from "../src/request-log.js";
 import hostedTranscripts from "./fixtures/autopilot-hosted-transcripts.json";
@@ -492,16 +492,14 @@ describe("founder outside the US (request field)", () => {
     const p = await plan();
     const ein = p.items.find(i => i.id === "ein")!;
     expect(ein.category).toBe("ein");
-    expect(ein.body).toBe("An EIN is the LLC's US tax number. Banks and payment processors ask for it, and it is free from the IRS. The IRS online application needs the responsible party's SSN or ITIN and can't be used when the principal place of business is outside the US, so a founder without an SSN or ITIN requests the EIN with Form SS-4 by phone, fax or mail; the guide lists the IRS numbers. Corpus's EIN add-on uses the online application, so it can't get this EIN for you; apply directly with the IRS after the LLC is formed.");
+    expect(ein.body).toContain("Living abroad by itself does not determine online eligibility.");
+    expect(ein.body).toContain("the responsible party’s SSN or ITIN");
     expect(ein.body).not.toMatch(/\+1 \d{3}|https?:|Cincinnati|a\.m\./);
     expect(ein.body).not.toContain("generally does not need a separate EIN");
     expect(ein.sourceIds).toEqual(["guide:nonres:ein", "guide:irs-ein", "guide:irs-ss4"]);
     const byId = (id: string) => p.sources.find(s => s.id === id)!;
     expect(byId("guide:nonres:ein")).toMatchObject({ kind: "guide", url: GUIDE_URL });
-    // The numbers the body defers to are in the quoted guide text.
-    expect(byId("guide:nonres:ein").excerpt).toContain("+1 267-941-1099");
-    expect(byId("guide:nonres:ein").excerpt).toContain("+1 304-707-9471");
-    expect(byId("guide:nonres:ein").excerpt).toContain("IRS EIN International Operation in Cincinnati");
+    expect(byId("guide:nonres:ein").excerpt).toContain("the current optional paper Form SS-4 service");
     expect(byId("guide:irs-ein")).toMatchObject({ url: "https://www.irs.gov/businesses/small-businesses-self-employed/get-an-employer-identification-number", excerpt: "Official IRS page. No excerpt was retrieved; open the page for the current guidance." });
     expect(byId("guide:irs-ss4")).toMatchObject({ url: "https://www.irs.gov/instructions/iss4", excerpt: "Official IRS page. No excerpt was retrieved; open the page for the current guidance." });
     expect(p.sources.some(s => s.id === "guide:ein" || s.id === "guide:irs")).toBe(false);
@@ -559,7 +557,7 @@ describe("founder outside the US (request field)", () => {
     expect(p.pricing.lines[0]).toBe("PRICE (live): $293.00 all-in — $103.00 state fees + $100.00 registered agent year 1 (included in the Corpus bundle; state requirements vary) + $90.00 Corpus service.");
     expect(p.pricing.lines.join("\n")).not.toContain("Optional EIN add-on");
     expect(p.pricing.lines.join("\n")).not.toContain("$75");
-    expect(p.pricing.lines.at(-1)).toBe("The EIN add-on isn't available without an SSN or ITIN; see the EIN step.");
+    expect(p.pricing.lines.at(-1)).toBe("Check checkout for current EIN add-on availability; see the EIN step.");
     expect(p.pricing.lines.filter(l => l.includes("EIN add-on"))).toHaveLength(1);
     expect(p.pricing.lines[1]).toContain("$268.00 instead of $293.00");
   });
@@ -815,7 +813,7 @@ describe("live quote by planning mode", () => {
   it("applies the non-US pricing changes while exploring too", async () => {
     const p = await buildPlan({ ...wyInput, mode: "exploring", ownerAbroad: true }, { tool: wyTool() });
     expect(p.pricing.lines.join("\n")).not.toContain("Optional EIN add-on");
-    expect(p.pricing.lines.at(-1)).toBe("The EIN add-on isn't available without an SSN or ITIN; see the EIN step.");
+    expect(p.pricing.lines.at(-1)).toBe("Check checkout for current EIN add-on availability; see the EIN step.");
   });
   it("still withholds the quote for an already formed company", async () => {
     const p = await buildPlan({ ...wyInput, mode: "formed" }, { tool: wyTool() });
@@ -939,6 +937,68 @@ describe("Qwen picks the relevant NAICS codes", () => {
     const select = vi.fn(async () => answer([]));
     await buildPlan({ ...wyInput, activity: "" }, { tool: sixTool, select });
     expect(((select.mock.calls[0] as unknown[])[2] as object)).not.toHaveProperty("naicsCandidates");
+  });
+});
+
+describe("EIN without an SSN or ITIN (founder abroad), gated on the web's einAddon.noSsnAvailable", () => {
+  const OLD_TAIL = "Check checkout or your dashboard for current Corpus add-on availability.";
+  const on = (cents = 15000) => async () => cents;
+  const abroad = (deps: Parameters<typeof buildPlan>[1] = {}) => buildPlan({ ...wyInput, ownerAbroad: true }, { tool: wyTool(), ...deps });
+
+  it("does not advertise a price or claim unavailability when no offer is read", async () => {
+    for (const deps of [{}, { einNoSsnOffer: async () => null }]) {
+      const p = await abroad(deps);
+      expect(p.items.find(i => i.id === "ein")!.body.endsWith(OLD_TAIL)).toBe(true);
+      expect(p.pricing.lines.at(-1)).toBe("Check checkout for current EIN add-on availability; see the EIN step.");
+      expect(p.sources.find(s => s.id === "guide:nonres:ein")!.excerpt).toBe(ABROAD_SOURCES["guide:nonres:ein"]!.excerpt);
+    }
+  });
+
+  it("says Corpus can get the EIN, at the price the web reported, once it is on sale", async () => {
+    const p = await abroad({ einNoSsnOffer: on() });
+    const ein = p.items.find(i => i.id === "ein")!;
+    expect(ein.body).not.toContain("can't get this EIN for you");
+    expect(ein.body).toContain("Corpus offers optional paper Form SS-4 filing for $150");
+    expect(ein.body).toContain("the responsible party signs it by hand and returns a scan or clear photo");
+    expect(ein.body).not.toContain("4–6 weeks");
+    expect(ein.body).toContain("You can still apply directly with the IRS for free.");
+    expect(p.pricing.lines.at(-1)).toBe("Optional EIN without an SSN or ITIN: +$150.00, paper Form SS-4 with a handwritten signature, not included above; see the EIN step.");
+    expect(p.pricing.lines.join("\n")).not.toContain("$75");
+    const excerpt = p.sources.find(s => s.id === "guide:nonres:ein")!.excerpt;
+    expect(excerpt).toBe(ABROAD_SOURCES["guide:nonres:ein"]!.excerpt);
+  });
+
+  it("never types the price in: a different figure from the web moves every line with it", async () => {
+    const p = await abroad({ einNoSsnOffer: on(17550) });
+    expect(p.items.find(i => i.id === "ein")!.body).toContain("for $175.50 when shown");
+    expect(p.pricing.lines.at(-1)).toContain("+$175.50");
+  });
+
+  it("falls back to today's wording when the read fails or hangs, and the plan still arrives", async () => {
+    for (const read of [async () => { throw new Error("down"); }, () => new Promise<number | null>(() => {})]) {
+      const p = await abroad({ einNoSsnOffer: read, timeoutMs: 8000 });
+      expect(p.items.find(i => i.id === "ein")!.body.endsWith(OLD_TAIL)).toBe(true);
+    }
+  });
+
+  it("is not asked for a US founder or a nonprofit", async () => {
+    const read = vi.fn(on());
+    await buildPlan(wyInput, { tool: wyTool(), einNoSsnOffer: read });
+    const np = wyCatalog.replace("LLC in WY", "nonprofit corporation in WY");
+    await buildPlan({ ...wyInput, entityType: "nonprofit", ownerAbroad: true }, { tool: wyTool({ "formation.requirements": np }), einNoSsnOffer: read });
+    expect(read).not.toHaveBeenCalled();
+  });
+
+  it("reads the web price list strictly: only an explicit true with a whole-cent amount counts", () => {
+    const body = (einAddon: unknown) => ({ ok: true, einAddon });
+    expect(einNoSsnCentsFrom(body({ cents: 7500, available: true, noSsnCents: 15000, noSsnAvailable: true }))).toBe(15000);
+    expect(einNoSsnCentsFrom(body({ noSsnCents: 15000, noSsnAvailable: false }))).toBeNull();
+    expect(einNoSsnCentsFrom(body({ noSsnCents: 15000, noSsnAvailable: "true" }))).toBeNull();
+    expect(einNoSsnCentsFrom(body({ noSsnCents: "15000", noSsnAvailable: true }))).toBeNull();
+    expect(einNoSsnCentsFrom(body({ noSsnCents: 150.5, noSsnAvailable: true }))).toBeNull();
+    expect(einNoSsnCentsFrom(body({ noSsnCents: 0, noSsnAvailable: true }))).toBeNull();
+    expect(einNoSsnCentsFrom({ ok: false, einAddon: { noSsnCents: 15000, noSsnAvailable: true } })).toBeNull();
+    expect(einNoSsnCentsFrom(null)).toBeNull();
   });
 });
 
