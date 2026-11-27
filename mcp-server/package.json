@@ -1,7 +1,7 @@
 {
   "name": "@corpuslaw/mcp-server",
   "version": "0.1.1",
-  "description": "Agentic business formation: AI agents prepare a US LLC or nonprofit order and a payment link; the founder pays and Corpus files. Plus 3 million+ provisions of US law with citations.",
+  "description": "Agentic business formation \u2014 AI agents prepare a US LLC or nonprofit order and a payment link; the founder pays and Corpus files. Plus 3 million+ provisions of US law with citations.",
   "keywords": [
     "mcp",
     "model-context-protocol",
