@@ -1,7 +1,7 @@
 {
   "name": "@corpuslaw/mcp-server",
   "version": "0.1.1",
-  "description": "MCP server giving any AI agent 2.9 million+ provisions of US federal, state and municipal law with verbatim citations \u2014 plus LLC/nonprofit formation intake. Thin client of corpuslaw.us.",
+  "description": "Agentic business formation: AI agents prepare a US LLC or nonprofit order and a payment link; the founder pays and Corpus files. Plus 3 million+ provisions of US law with citations.",
   "keywords": [
     "mcp",
     "model-context-protocol",
@@ -13,6 +13,9 @@
     "statutes",
     "legal-research",
     "business-formation",
+    "company-formation",
+    "incorporation",
+    "agentic-formation",
     "llc",
     "ai-agents",
     "claude",
