@@ -1,8 +1,12 @@
 # @corpuslaw/mcp-server
 
-MCP server giving any AI agent **2.9 million+ provisions of US federal, state and
-municipal law** with verbatim citations — plus a complete LLC / nonprofit
-formation intake.
+Agentic business formation for AI agents. Your agent works out the entity and
+state, checks the name, picks a NAICS code, then creates the LLC or nonprofit
+formation order and a payment link. The founder pays (Stripe by default) and
+confirms by email, and Corpus files. The agent never holds payment details.
+The same server gives the agent **3 million+ provisions of US federal, state
+and municipal law** with verbatim citations, so it can answer what rules apply
+after formation.
 
 ```bash
 npx -y @corpuslaw/mcp-server
