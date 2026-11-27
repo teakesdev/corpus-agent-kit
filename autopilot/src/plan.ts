@@ -217,7 +217,10 @@ export async function buildPlan(raw: PlanInput, deps: PlanDeps = {}, parent = ne
       ? `Local law was not searched for this plan; the coverage entry for ${local.name} (${local.code}) only shows that it is searchable.`
       : "Local coverage gap: no local search was run.";
 
-    const lines = catalog?.split("\n").filter(l => /^(?:PRICE(?: \(live\))?:|FOUNDING DISCOUNT:|EXPEDITE \(|SKIP REVIEW \(|TENNESSEE MEMBERS:|EIN ADD-ON: temporarily unavailable)/.test(l)) ?? [];
+    // The discount line is named after the running offer ("FOUNDING DISCOUNT:", "BLACK FRIDAY DISCOUNT:"), so an
+    // upper-case offer name of one or two words before "DISCOUNT:" is kept; a lone "DISCOUNT:", mixed case or a
+    // longer heading is not.
+    const lines = catalog?.split("\n").filter(l => /^(?:PRICE(?: \(live\))?:|(?:[A-Z]+ ){1,2}DISCOUNT:|EXPEDITE \(|SKIP REVIEW \(|TENNESSEE MEMBERS:|EIN ADD-ON: temporarily unavailable)/.test(l)) ?? [];
     const validPrice = lines.filter(l => /^PRICE \(live\): \$\d+(?:,\d{3})*\.\d{2} all-in — /.test(l)).length === 1 &&
       lines.filter(l => /^PRICE/.test(l)).length === 1 && lines.length <= 10 &&
       lines.every(l => l.length <= 6000) && Buffer.byteLength(lines.join("\n")) <= 16384;

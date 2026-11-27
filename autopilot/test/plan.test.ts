@@ -812,6 +812,29 @@ describe("live quote by planning mode", () => {
     expect(p.pricing.lines[1]).toContain("FOUNDING DISCOUNT");
     expect(p.warnings.join(" ")).not.toContain("Current pricing is unavailable");
   });
+  // Corpus names the discount line after the offer that is running: "FOUNDING DISCOUNT:" before 2026-11-27, then
+  // "BLACK FRIDAY DISCOUNT:" (Corpus lib/mcp.ts). The planner must keep whichever name the live quote uses.
+  it("keeps a discount line under any offer name, Black Friday included", async () => {
+    const bf = "BLACK FRIDAY DISCOUNT: $25 off the formation bundle, granted automatically at order creation — no code needed — for every order created before 11:59 p.m. Pacific on Tuesday, Dec. 1, 2026. If this order is created before then, its total due today is $268.00 instead of $293.00 — EIN and expedite add-ons are never discounted. Ends at 11:59 p.m. Pacific on Tuesday, Dec. 1, 2026. The discount doesn't combine with a referral discount (you get the larger). Tell the founder before they pay.";
+    const catalog = wyCatalog.replace(/^FOUNDING DISCOUNT:.*$/m, bf);
+    expect(catalog).toContain("BLACK FRIDAY DISCOUNT:");
+    const p = await buildPlan(wyInput, { tool: wyTool({ "formation.requirements": catalog }) });
+    expect(p.pricing.available).toBe(true);
+    expect(p.pricing.lines).toHaveLength(2);
+    expect(p.pricing.lines[1]).toMatch(/^BLACK FRIDAY DISCOUNT: \$25 off the formation bundle/);
+    expect(p.pricing.lines[1]).not.toMatch(/tell the founder/i);
+  });
+  it.each([
+    ["CYBER MONDAY DISCOUNT: $10 off.", true],
+    ["FOUNDING DISCOUNT: $10 off.", true],
+    ["DISCOUNT: $10 off.", false],
+    ["Black Friday discount: $10 off.", false],
+    ["NOTE ABOUT THE DISCOUNT: none.", false],
+  ])("discount line %j is kept: %s", async (line, kept) => {
+    const catalog = wyCatalog.replace(/^FOUNDING DISCOUNT:.*$/m, line);
+    const p = await buildPlan(wyInput, { tool: wyTool({ "formation.requirements": catalog }) });
+    expect(p.pricing.lines.includes(line)).toBe(kept);
+  });
   it("applies the non-US pricing changes while exploring too", async () => {
     const p = await buildPlan({ ...wyInput, mode: "exploring", ownerAbroad: true }, { tool: wyTool() });
     expect(p.pricing.lines.join("\n")).not.toContain("Optional EIN add-on");
