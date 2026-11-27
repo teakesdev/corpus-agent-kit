@@ -1,9 +1,9 @@
 # Phase 1 sourced planning backend
 
 > **This file is the Phase 1 record**, deployed at source commit `cb3999ba87ebf914e01407902aaea1716be946f0`
-> (sections dated 2026-10-25 and 2026-10-26). It is history and is not rewritten. Changes since then are in
-> [2026-11-07 release](#2026-11-07-release) at the end; where the two disagree (hourly cap, `law.search`, response
-> contents), the later section is current.
+> (sections dated 2026-10-25 and 2026-10-26). It is history and is not rewritten. Changes since then are in the dated
+> release sections at the end ([2026-11-07](#2026-11-07-release), [2026-11-27](#2026-11-27-release)); where they
+> disagree (hourly cap, `law.search`, response contents), the latest section is current.
 
 ## Deployment state — 2026-10-26
 
@@ -187,3 +187,24 @@ several FC instances can exceed them by that factor.
 **Rollback.** Redeploy the previous FC code at `158328c`, or `cb3999ba` for the Phase 1 code. Both are code-only. The web
 allowlist additions are harmless to older plans. `SPEND_CAP_TURNS_PER_HOUR` is an environment variable and stays at
 600 unless `s.yaml` is redeployed with the old value.
+
+## 2026-11-27 release
+
+Source `4e16054` on `main` (PR [#23](https://github.com/teakesdev/corpus-agent-kit/pull/23)), deployed to FC on
+2026-11-27 at 21:49:33 UTC (15:49 CST) on ty's go-ahead. It replaces `13ab1f6`, which FC had run since 2026-11-08 05:04
+UTC (`s info` `lastModifiedTime`). Not independently reviewed.
+
+**What changed.** The plan's pricing filter kept a discount line only when it began `FOUNDING DISCOUNT:`. Corpus renamed
+the line `BLACK FRIDAY DISCOUNT:` for its Black Friday offer, which ends at 11:59 p.m. Pacific on Tuesday, Dec. 1, 2026.
+Live plans therefore showed the price without the $25 discount. The filter now keeps an upper-case offer name of one or
+two words before `DISCOUNT:`, so a later rename needs no planner change. Between `13ab1f6` and `4e16054`, the rest of
+`autopilot/` changed only in comments (`src/server.ts`, `deploy/alibaba/s.yaml`), and root `package.json` scripts are
+not packaged. The request and response shapes are unchanged, so deploy order does not matter. The web client accepts any
+pricing line of up to 6,000 characters.
+
+**Checked.** Before the deploy, a ready-mode Wyoming LLC plan returned only the `PRICE (live)` line, while
+`formation.requirements` returned the Black Friday line. After it, the same request returned both lines (`/healthz` ok,
+200 in 2.2 s), and a plan built on corpuslaw.us/autopilot in a browser showed the line. Those test plans ran from
+21:49 to 21:51 UTC with activities starting "Deploy check:"; leave them out of plan counts. All 282 autopilot tests pass.
+
+**Rollback.** Redeploy `13ab1f6` (code only). That code drops the discount line again and changes nothing else.
