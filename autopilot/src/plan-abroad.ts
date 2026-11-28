@@ -22,12 +22,25 @@ const IRS_5472 = "https://www.irs.gov/instructions/i5472";
 /** Prefixed to the EIN item only when the Qwen flag, not the request, switched the non-US items on. */
 export const ABROAD_FLAG_NOTE = "Your description suggests you're based outside the US. ";
 
-export const ABROAD_EIN_TITLE = "Get an EIN without an SSN or ITIN";
+export const ABROAD_EIN_TITLE = "Check how to get an EIN";
+const ABROAD_EIN_LEAD =
+  "An EIN is the LLC's US tax number. The IRS issues EINs for free after formation. Living abroad by itself does not determine online eligibility. " +
+  "The IRS online application requires a U.S. principal place of business (or one in a U.S. territory) and the responsible party’s SSN or ITIN. " +
+  "If online filing is not available to you, see the IRS Form SS-4 instructions for the applicable phone, fax or mail route. ";
+
 export const ABROAD_EIN =
-  "An EIN is the LLC's US tax number. Banks and payment processors ask for it, and it is free from the IRS. " +
-  "The IRS online application needs the responsible party's SSN or ITIN and can't be used when the principal place of business is outside the US, " +
-  "so a founder without an SSN or ITIN requests the EIN with Form SS-4 by phone, fax or mail; the guide lists the IRS numbers. " +
-  "Corpus's EIN add-on uses the online application, so it can't get this EIN for you; apply directly with the IRS after the LLC is formed.";
+  ABROAD_EIN_LEAD + "Check checkout or your dashboard for current Corpus add-on availability.";
+
+const dollars = (cents: number) => (cents % 100 === 0 ? `$${cents / 100}` : `$${(cents / 100).toFixed(2)}`);
+
+/** Only a confirmed live price signal can advertise the optional paper filing service. */
+export function abroadEinBody(noSsnCents: number | null): string {
+  if (noSsnCents === null) return ABROAD_EIN;
+  return ABROAD_EIN_LEAD +
+    `If the responsible party has no SSN or ITIN, Corpus offers optional paper Form SS-4 filing for ${dollars(noSsnCents)} when shown at checkout or in your dashboard. ` +
+    "Corpus prepares the form; the responsible party signs it by hand and returns a scan or clear photo before the filing partner submits it. " +
+    "You can still apply directly with the IRS for free.";
+}
 
 export const FORM_5472_TITLE = "File the yearly Form 5472 for a foreign-owned LLC";
 export const FORM_5472 =
@@ -39,6 +52,11 @@ export const FORM_5472 =
 
 const IRS_PAGE_NOTE = "Official IRS page. No excerpt was retrieved; open the page for the current guidance.";
 const guideSource = (id: string, label: string, excerpt: string): PlanSource => ({ id, kind: "guide", label, url: NON_RESIDENT_GUIDE, excerpt });
+
+// Do not represent cached offer details as a verbatim quote from the current guide.
+export function abroadEinGuideExcerpt(): string {
+  return "See the Corpus non-resident guide for IRS application routes and the current optional paper Form SS-4 service.";
+}
 const irsSource = (id: string, label: string, url: string): PlanSource => ({ id, kind: "guide", label, url, excerpt: IRS_PAGE_NOTE });
 
 /**
@@ -46,11 +64,7 @@ const irsSource = (id: string, label: string, url: string): PlanSource => ({ id,
  * (checked 2026-11-05); the IRS pages were not fetched here, so they carry the same no-excerpt note as the existing IRS source.
  */
 export const ABROAD_SOURCES: Record<string, PlanSource> = Object.fromEntries([
-  guideSource("guide:nonres:ein", "Corpus guide — getting an EIN without an SSN",
-    "The online application probably isn't for you. It needs the responsible party's SSN or ITIN, and it can't be used when the principal place of business is outside the US. " +
-    "Apply by phone, fax or mail instead. With no legal residence, principal place of business or principal office in the US, call +1 267-941-1099 (not toll-free; 6 a.m.–11 p.m. Eastern, Monday–Friday), " +
-    "fax Form SS-4 to +1 304-707-9471 from outside the US, or mail it to the IRS EIN International Operation in Cincinnati, which takes about four weeks. " +
-    "Corpus's EIN add-on uses the online application, so it can't do this for you today. You apply directly with the IRS after the LLC is formed."),
+  guideSource("guide:nonres:ein", "Corpus guide — getting an EIN without an SSN", abroadEinGuideExcerpt()),
   irsSource("guide:irs-ein", "IRS — Get an employer identification number", IRS_EIN),
   irsSource("guide:irs-ss4", "IRS — Instructions for Form SS-4", IRS_SS4),
   guideSource("guide:nonres:5472", "Corpus guide — Form 5472",
@@ -94,13 +108,19 @@ export function officeRuleFromCatalog(catalog: string): string | null {
 
 export const ABROAD_STATE_TAX = "Operating location: outside the US. Whether the LLC must register for tax in any US state has not been determined.";
 export const ABROAD_LOCAL = "You're operating from outside the US, so no US city's local rules were checked. If you'll have a location in a US city, add it and refresh the plan.";
-export const ABROAD_EIN_PRICING_LINE = "The EIN add-on isn't available without an SSN or ITIN; see the EIN step.";
+export const ABROAD_EIN_PRICING_LINE = "Check checkout for current EIN add-on availability; see the EIN step.";
+
+/** The pricing line for a founder abroad: only a verified offer shows a price. */
+export function abroadEinPricingLine(noSsnCents: number | null): string {
+  return noSsnCents === null ? ABROAD_EIN_PRICING_LINE
+    : `Optional EIN without an SSN or ITIN: +$${(noSsnCents / 100).toFixed(2)}, paper Form SS-4 with a handwritten signature, not included above; see the EIN step.`;
+}
 
 /**
  * A pricing line as the founder should read it. The hosted text is written for an AI agent, so sentences that give the
  * agent an instruction ("Tell the founder before they pay.") are dropped. Prices are never touched. For a founder
  * abroad the $75 EIN add-on clause also goes: that add-on files the online IRS application, which needs an SSN or ITIN
- * and refuses a principal office abroad.
+ * and requires a U.S. principal place of business. Residence alone does not establish either condition.
  */
 export function pricingLineForDisplay(line: string, abroad: boolean): string {
   const sentences = line.split(/(?<=[.!?])\s+/).filter(s => !/^tell (?:the|your) (?:founder|user)\b/i.test(s.trim()));
