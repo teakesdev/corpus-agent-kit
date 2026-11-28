@@ -2,15 +2,21 @@
 
 # corpus-agent-kit
 
-**Agentic business formation: your AI agent forms the company, a person approves it.**
+**US law search down to the city, and business formation, for AI agents: one MCP server.**
 
-Open-source connectors for [Corpus Law](https://corpuslaw.us). Your agent runs
-the whole US LLC or nonprofit formation intake: it checks what the state
-requires, finds the NAICS code, compares filing options and prepares the
-filing. Every filing stops at a human approval gate, where a person reviews it
-and pays. The same tools give the agent cited search over 2.9M+ provisions of
-US federal, state and municipal law, so it can answer what rules apply to the
-business with verbatim citations.
+Open-source connectors for [Corpus Law](https://corpuslaw.us). Two jobs, one server:
+
+- **Search US law, down to the city.** Cited search over 2.9M+ provisions:
+  federal law, all 50 states plus DC, and about 300 city and county codes of
+  ordinances, in one call. Scope it with `jurisdiction` (`US`, `AZ`,
+  `AZ-TUCSON`). Every result carries its official citation, and the full text
+  is one call away, so answers can be checked. No case law: for court opinions,
+  use [CourtListener](https://www.courtlistener.com/). API overview and price:
+  [corpuslaw.us/law-api](https://corpuslaw.us/law-api).
+- **Form the company.** Your agent runs the whole US LLC or nonprofit
+  formation intake: it checks what the state requires, finds the NAICS code,
+  compares filing options and prepares the filing. Every filing stops at a
+  human approval gate, where a person reviews it and pays.
 
 [![Winner — Qwen Cloud Hackathon, Track 4](https://img.shields.io/badge/Winner-Qwen%20Cloud%20Hackathon%20·%20Track%204-6f42c1)](https://devpost.com/software/corpus-mcp)
 [![License](https://img.shields.io/badge/license-Apache--2.0-blue)](LICENSE)
@@ -36,8 +42,9 @@ no build, no local process:
 }
 ```
 
-That is the whole setup. Ask your agent *"what does Mississippi require to form
-an LLC?"* and it will answer from live statutes with citations you can check.
+That is the whole setup. Ask your agent *"what does Tucson's code say about food
+trucks?"* or *"what does Mississippi require to form an LLC?"* and it will answer
+from the law itself, with citations you can check.
 
 **Research is free to start:** 250 searches/month anonymously. A
 [free API key](https://corpuslaw.us/settings) — instant, self-serve, no waiting
@@ -343,6 +350,20 @@ anonymous allotment.
 
 > Use the full scoped name. `npx corpus-mcp` resolves to an unrelated package
 > on npm — only `@corpuslaw/mcp-server` is ours.
+
+#### Official MCP registry
+
+`server.json` at the repo root lists Corpus in the official MCP registry as
+`io.github.teakesdev/corpus`, with the hosted endpoint as a remote and this
+bridge as the npm package. Its versions move with the `mcp-server` train
+(`node scripts/check-versions.mjs`). The registry checks that the npm package
+carries the same `mcpName`, so publish the package first:
+
+```bash
+cd mcp-server && npm publish --access public   # 0.1.1 is the first version with mcpName
+cd .. && mcp-publisher login github            # as teakesdev
+mcp-publisher publish                          # reads ./server.json
+```
 
 <details>
 <summary>Running from a clone instead</summary>
